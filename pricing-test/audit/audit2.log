@@ -1,0 +1,96 @@
+PASS step2.masters_s3_unauth :: S3 endpoint list without credentials -> 400
+FAIL step2.ztor-masters_r2dev_disabled :: pub-74c116aa49a545e58268000f8c5a9dab.r2.dev -> 401 (managed domain enabled:false per API)
+FAIL step2.ztor-streams_r2dev_disabled :: pub-ac5cf0e43de947b5a6369951cbdafe94.r2.dev -> 401 (managed domain enabled:false per API)
+PASS step2.masters_not_via_worker :: Worker has no masters route -> 404
+skipping upload dry run
+
+===== SPL2 439662d9 v5
+PASS SPL2.step7.402_without_rental :: 402 {'error': 'Rent this film to watch it.'}
+PASS SPL2.step7.401_without_login :: 401
+PASS SPL2.step7.pass_4h :: exp-iat=14400s claims={'sub': 'audit-4avw0f', 'filmId': '439662d9-e97b-44f5-9ae1-7bd346553e4b', 'deviceId': 'audit', 'uhd': False}
+PASS SPL2.step7.links_and_policy :: policy no-hdcp={'rentalWindowH': 48, 'offline': False, 'maxHeight': 1080, 'reason': 'no HDCP: this device plays up to 1080p'} vendor=axinom (Widevine / PlayReady / FairPlay)
+PASS SPL2.step7.mpd_401_no_pass :: 401
+PASS SPL2.step7.mpd_401_forged :: 401
+PASS SPL2.step7.mpd_401_tampered_claims :: 401
+PASS SPL2.step7.mpd_401_other_film_pass :: pass for 439662d9 on ae60bf2f -> 401
+PASS SPL2.step7.mpd_200_header_pass :: 200 cache-control=private, max-age=60 ct=application/dash+xml
+PASS SPL2.step7.mpd_200_query_pass :: 200
+PASS SPL2.step8.hls_master_policy_filter :: variants no-hdcp=['1920x1080', '640x360', '853x480', '1280x720'] hdcp=['1920x1080', '640x360', '853x480', '1280x720'] pass_in_uris=True cc=private, no-store
+PASS SPL2.step7.media_playlist_401_no_pass :: 401
+PASS SPL2.step5.hls_key_signalling :: keyformats=['com.apple.streamingkeydelivery', 'com.microsoft.playready', 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed'] skd_kids_match_D1=True iv_present=True n_skd=2
+/private/tmp/claude-501/-Users-muhammadlutfizakaria-cloudflare-video-inspection/3f30e09d-a020-4376-9812-883c266ab5a7/scratchpad/audit/audit.py:155: DeprecationWarning: Testing an element's truth value will always return True in future versions.  Use specific 'len(elem)' or 'elem is not None' test instead.
+  stpl = rep.find("m:SegmentTemplate", ns) or aset.find("m:SegmentTemplate", ns)
+PASS SPL2.step5.dash_ladder :: peak(@bandwidth)>=target={1080: True, 720: True, 480: True, 360: True} type=static dur=PT73.208336S heights=[1080, 720, 480, 360] kbps={1080: 7326, 720: 3697, 480: 1824, 360: 967} segdur={6.0, 6.016}
+PASS SPL2.step6.dash_kids_match_d1 :: mpd_kids=['487dd9cef63eb9e89d8fdeefbee25117', 'f48ea1b553a95225913efc4a03afecdf'] d1=['487dd9cef63eb9e89d8fdeefbee25117', 'f48ea1b553a95225913efc4a03afecdf']
+PASS SPL2.step5.dash_drm_signalling :: scheme={'cbcs'} systems=['9a04f079', 'edef8ba9']
+PASS SPL2.step7.segments_public_immutable :: {'video_360p': 'public, max-age=31536000, immutable', 'video_1080p': 'public, max-age=31536000, immutable', 'audio': 'public, max-age=31536000, immutable'}
+PASS SPL2.step5.clear_lead_0_all_segments_encrypted :: {'video_360p': [True, True, True], 'video_1080p': [True, True, True], 'audio': [True, True, True]}
+PASS SPL2.step5.init_scheme_and_kid :: {'video_360p': ('cbcs', 'f48ea1b5'), 'video_1080p': ('cbcs', 'f48ea1b5'), 'audio': ('cbcs', '487dd9ce')}
+PASS SPL2.step7.segment_head_ranges :: HEAD 200 accept-ranges=bytes len=604179
+PASS SPL2.step8.license_401_no_pass :: 401 {'error': 'valid play token required'}
+PASS SPL2.step8.clearkey_closed_410 :: 410 {'error': 'ClearKey is disabled while a DRM vendor is configured'}
+PASS SPL2.step8.fairplay_cert :: 200 1242 bytes cc=public, max-age=3600
+PASS SPL2.step8.entitlement_policy :: expiry==rental_expiry=True persistence=False UHD={'name': 'UHD', 'widevine': {'device_security_level': 'HW_SECURE_ALL', 'hdcp': '2.2'}, 'playready': {'min_device_security_level': 3000}, 'fairplay': {'hdcp': 'TYPE1', 'allow_airplay': False, 'allow_av_adapter': False}}
+PASS SPL2.step8.uhd_key_only_with_hdcp :: keys no-hdcp=2 hdcp=3
+
+===== VULG4K ae60bf2f v9
+PASS VULG4K.step7.402_without_rental :: 402 {'error': 'Rent this film to watch it.'}
+PASS VULG4K.step7.401_without_login :: 401
+PASS VULG4K.step7.pass_4h :: exp-iat=14400s claims={'sub': 'audit-4avw0f', 'filmId': 'ae60bf2f-5bd1-44cc-838b-d60e4594b98d', 'deviceId': 'audit', 'uhd': False}
+PASS VULG4K.step7.links_and_policy :: policy no-hdcp={'rentalWindowH': 48, 'offline': False, 'maxHeight': 1080, 'reason': 'no HDCP: this device plays up to 1080p'} vendor=axinom (Widevine / PlayReady / FairPlay)
+PASS VULG4K.step7.mpd_401_no_pass :: 401
+PASS VULG4K.step7.mpd_401_forged :: 401
+PASS VULG4K.step7.mpd_401_tampered_claims :: 401
+PASS VULG4K.step7.mpd_401_other_film_pass :: pass for ae60bf2f on 439662d9 -> 401
+PASS VULG4K.step7.mpd_200_header_pass :: 200 cache-control=private, max-age=60 ct=application/dash+xml
+PASS VULG4K.step7.mpd_200_query_pass :: 200
+PASS VULG4K.step8.hls_master_policy_filter :: variants no-hdcp=['1920x1080', '640x360', '853x480', '1280x720'] hdcp=['1920x1080', '3840x2160', '640x360', '853x480', '1280x720'] pass_in_uris=True cc=private, no-store
+PASS VULG4K.step7.media_playlist_401_no_pass :: 401
+PASS VULG4K.step5.hls_key_signalling :: keyformats=['com.apple.streamingkeydelivery', 'com.microsoft.playready', 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed'] skd_kids_match_D1=True iv_present=True n_skd=3
+PASS VULG4K.step5.dash_ladder :: peak(@bandwidth)>=target={2160: True, 1080: True, 720: True, 480: True, 360: True} type=static dur=PT122.083336S heights=[2160, 1080, 720, 480, 360] kbps={2160: 18123, 1080: 6942, 720: 3476, 480: 1756, 360: 931} segdur={6.0, 6.013968253968254}
+PASS VULG4K.step6.dash_kids_match_d1 :: mpd_kids=['1d39b33d9f9cec196b0cdf699fae936f', 'd30be75e1e2d49d6fcd2a55a1ce49fa5', 'e0ef5085994c2071bd9c524e510d33f7'] d1=['1d39b33d9f9cec196b0cdf699fae936f', 'd30be75e1e2d49d6fcd2a55a1ce49fa5', 'e0ef5085994c2071bd9c524e510d33f7']
+PASS VULG4K.step5.dash_drm_signalling :: scheme={'cbcs'} systems=['9a04f079', 'edef8ba9']
+PASS VULG4K.step7.segments_public_immutable :: {'video_360p': 'public, max-age=31536000, immutable', 'video_1080p': 'public, max-age=31536000, immutable', 'video_2160p': 'public, max-age=31536000, immutable', 'audio': 'public, max-age=31536000, immutable'}
+PASS VULG4K.step5.clear_lead_0_all_segments_encrypted :: {'video_360p': [True, True, True], 'video_1080p': [True, True, True], 'video_2160p': [True, True, True], 'audio': [True, True, True]}
+PASS VULG4K.step5.init_scheme_and_kid :: {'video_360p': ('cbcs', '1d39b33d'), 'video_1080p': ('cbcs', '1d39b33d'), 'video_2160p': ('cbcs', 'd30be75e'), 'audio': ('cbcs', 'e0ef5085')}
+PASS VULG4K.step7.segment_head_ranges :: HEAD 200 accept-ranges=bytes len=562098
+PASS VULG4K.step8.license_401_no_pass :: 401 {'error': 'valid play token required'}
+PASS VULG4K.step8.clearkey_closed_410 :: 410 {'error': 'ClearKey is disabled while a DRM vendor is configured'}
+PASS VULG4K.step8.fairplay_cert :: 200 1242 bytes cc=public, max-age=3600
+PASS VULG4K.step8.entitlement_policy :: expiry==rental_expiry=True persistence=False UHD={'name': 'UHD', 'widevine': {'device_security_level': 'HW_SECURE_ALL', 'hdcp': '2.2'}, 'playready': {'min_device_security_level': 3000}, 'fairplay': {'hdcp': 'TYPE1', 'allow_airplay': False, 'allow_av_adapter': False}}
+PASS VULG4K.step8.uhd_key_only_with_hdcp :: keys no-hdcp=2 hdcp=3
+
+===== X9 becd8657 v1
+PASS X9.step7.402_without_rental :: 402 {'error': 'Rent this film to watch it.'}
+PASS X9.step7.401_without_login :: 401
+PASS X9.step7.pass_4h :: exp-iat=14400s claims={'sub': 'audit-4avw0f', 'filmId': 'becd8657-a8c0-4502-838d-527cb533d166', 'deviceId': 'audit', 'uhd': False}
+PASS X9.step7.links_and_policy :: policy no-hdcp={'rentalWindowH': 48, 'offline': False, 'maxHeight': 1080, 'reason': 'no HDCP: this device plays up to 1080p'} vendor=axinom (Widevine / PlayReady / FairPlay)
+PASS X9.step7.mpd_401_no_pass :: 401
+PASS X9.step7.mpd_401_forged :: 401
+PASS X9.step7.mpd_401_tampered_claims :: 401
+PASS X9.step7.mpd_401_other_film_pass :: pass for becd8657 on 439662d9 -> 401
+PASS X9.step7.mpd_200_header_pass :: 200 cache-control=private, max-age=60 ct=application/dash+xml
+PASS X9.step7.mpd_200_query_pass :: 200
+PASS X9.step8.hls_master_policy_filter :: variants no-hdcp=['1920x1080', '640x360', '853x480', '1280x720'] hdcp=['1920x1080', '3840x2160', '640x360', '853x480', '1280x720'] pass_in_uris=True cc=private, no-store
+PASS X9.step7.media_playlist_401_no_pass :: 401
+FAIL X9.step5.hls_key_signalling :: keyformats=['com.apple.streamingkeydelivery', 'com.microsoft.playready', 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed'] skd_kids_match_D1=False iv_present=False n_skd=1
+PASS X9.step5.dash_ladder :: peak(@bandwidth)>=target={2160: True, 1080: True, 720: True, 480: True, 360: True} type=static dur=PT1099.166626S heights=[2160, 1080, 720, 480, 360] kbps={2160: 19144, 1080: 7299, 720: 3647, 480: 1849, 360: 995} segdur={6.0, 6.014013605442177}
+PASS X9.step6.dash_kids_match_d1 :: mpd_kids=['596395fba95b3f3cb1ca7a9f80b85f05', 'e3a226ab5be290a0715c928d23ac5d5e', 'f9f3c7611e9acf8dc277a37ba76e0979'] d1=['596395fba95b3f3cb1ca7a9f80b85f05', 'e3a226ab5be290a0715c928d23ac5d5e', 'f9f3c7611e9acf8dc277a37ba76e0979']
+PASS X9.step5.dash_drm_signalling :: scheme={'cenc'} systems=['1077efec', '9a04f079', 'edef8ba9']
+PASS X9.step7.segments_public_immutable :: {'video_360p': 'public, max-age=31536000, immutable', 'video_1080p': 'public, max-age=31536000, immutable', 'video_2160p': 'public, max-age=31536000, immutable', 'audio': 'public, max-age=31536000, immutable'}
+PASS X9.step5.clear_lead_0_all_segments_encrypted :: {'video_360p': [True, True, True], 'video_1080p': [True, True, True], 'video_2160p': [True, True, True], 'audio': [True, True, True]}
+PASS X9.step5.init_scheme_and_kid :: {'video_360p': ('cenc', 'f9f3c761'), 'video_1080p': ('cenc', 'f9f3c761'), 'video_2160p': ('cenc', '596395fb'), 'audio': ('cenc', 'e3a226ab')}
+PASS X9.step7.segment_head_ranges :: HEAD 200 accept-ranges=bytes len=563250
+PASS X9.step8.license_401_no_pass :: 401 {'error': 'valid play token required'}
+PASS X9.step8.clearkey_closed_410 :: 410 {'error': 'ClearKey is disabled while a DRM vendor is configured'}
+PASS X9.step8.fairplay_cert :: 200 1242 bytes cc=public, max-age=3600
+PASS X9.step8.entitlement_policy :: expiry==rental_expiry=True persistence=False UHD={'name': 'UHD', 'widevine': {'device_security_level': 'HW_SECURE_ALL', 'hdcp': '2.2'}, 'playready': {'min_device_security_level': 3000}, 'fairplay': {'hdcp': 'TYPE1', 'allow_airplay': False, 'allow_av_adapter': False}}
+PASS X9.step8.uhd_key_only_with_hdcp :: keys no-hdcp=2 hdcp=3
+PASS step8.axinom_valid_vs_tampered :: valid -> 200 '<binary 706 bytes, HTTP 200>' | tampered -> 400 'Invalid DRM message. The provided JWT has an invalid signature.'
+PASS admin.requires_runner_token :: 401
+PASS jobs.requires_runner_token :: 401
+FAIL EXPOSURE.test_rent_is_anonymous :: POST /test/rent granted a 48 h rental to any userId with no credential (TEST_MODE=true on the public Worker)
+FAIL EXPOSURE.test_drm_token_is_anonymous :: GET /test/drm-token/{film} returns a signed Axinom entitlement usable directly against the vendor with a real device (TEST_MODE=true)
+PASS cleanup.probe_rentals_revoked :: {'active': False}
+
+TOTAL 80/85 passed; results in audit_results.json

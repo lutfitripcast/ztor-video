@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ztor. — Streaming stack proposal (5B: R2 + Cloudflare)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;800;900&family=Noto+Sans+TC:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f5f2; --surface:#ffffff; --line:#e3ded6; --text:#161412; --muted:#5f5a53;
+  --accent:#ffa33f; --accent-ink:#9a5200; --accent-soft:#fff1e0; --good:#1f7a4a; --warn:#9a5200;
+  --bar-other:#cfc8be; --code-bg:#1b1916; --code-text:#f3eee7;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0a0a0a; --surface:#141414; --line:#262626; --text:#f4f1ec; --muted:#a39e96;
+    --accent:#ffa33f; --accent-ink:#ffa33f; --accent-soft:#2a1c0c; --good:#5fd394; --warn:#ffa33f;
+    --bar-other:#3a3a3a; --code-bg:#050505; --code-text:#f3eee7;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0a0a0a; --surface:#141414; --line:#262626; --text:#f4f1ec; --muted:#a39e96;
+  --accent:#ffa33f; --accent-ink:#ffa33f; --accent-soft:#2a1c0c; --good:#5fd394; --warn:#ffa33f;
+  --bar-other:#3a3a3a; --code-bg:#050505; --code-text:#f3eee7;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Figtree","Noto Sans TC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+a{color:var(--accent-ink)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+.prose{max-width:68ch}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:24px;height:60px}
+.logo{font-weight:900;font-size:26px;letter-spacing:-.04em;text-decoration:none;color:var(--text)}
+.logo span{color:var(--accent)}
+.top nav{display:flex;gap:4px;margin-left:auto;overflow-x:auto}
+.top nav a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:600;padding:6px 10px;border-radius:999px;white-space:nowrap}
+.top nav a:hover{color:var(--text);background:var(--surface)}
+
+/* hero */
+.hero{padding:72px 0 40px}
+.hero .kicker{color:var(--muted);font-size:15px;margin:0 0 18px}
+.hero h1{font-size:clamp(40px,6.4vw,80px);line-height:.98;letter-spacing:-.035em;font-weight:900;margin:0 0 22px;max-width:15ch}
+.hero .lede{font-size:20px;color:var(--muted);max-width:56ch;margin:0}
+
+/* the signature: price scale */
+.scale{margin:48px 0 8px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:28px 28px 20px}
+.scale h2{font-size:18px;margin:0 0 4px}
+.scale .sub{color:var(--muted);font-size:14px;margin:0 0 24px}
+.row{display:grid;grid-template-columns:150px 1fr 120px;align-items:center;gap:16px;padding:9px 0}
+.row .name{font-weight:600;font-size:15px}
+.row .track{height:28px;position:relative}
+.row .bar{height:100%;background:var(--bar-other);border-radius:0 6px 6px 0;min-width:6px}
+.row .bar.range{background:linear-gradient(90deg,var(--bar-other) 0 var(--lo),color-mix(in srgb,var(--bar-other) 45%,transparent) var(--lo) 100%)}
+.row.us .name{color:var(--accent-ink)}
+.row.us .bar{background:var(--accent)}
+.row .val{font-variant-numeric:tabular-nums;font-weight:800;text-align:right;font-size:17px}
+.row .val small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.scale .foot{font-size:13px;color:var(--muted);margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+
+/* sections */
+section.block{padding:64px 0;border-top:1px solid var(--line)}
+.sec-head{display:grid;grid-template-columns:72px 1fr;gap:8px 20px;margin-bottom:28px}
+.sec-no{font-size:56px;font-weight:900;line-height:.9;color:var(--accent);letter-spacing:-.04em}
+.sec-head h2{font-size:clamp(28px,3.6vw,40px);line-height:1.1;letter-spacing:-.02em;margin:0;font-weight:800}
+.sec-head p{grid-column:2;margin:0;color:var(--muted);max-width:62ch}
+h3{font-size:20px;margin:36px 0 10px;letter-spacing:-.01em}
+
+.points{list-style:none;padding:0;margin:0 0 8px;display:grid;gap:10px}
+.points li{padding-left:22px;position:relative;max-width:70ch}
+.points li::before{content:"";position:absolute;left:0;top:.62em;width:10px;height:10px;border-radius:50%;background:var(--accent)}
+
+.callout{background:var(--accent-soft);border-left:4px solid var(--accent);padding:16px 20px;border-radius:0 12px 12px 0;margin:24px 0;max-width:78ch}
+.callout strong{color:var(--accent-ink)}
+
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:15px}
+th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:700;color:var(--muted);font-size:13px;background:var(--surface)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.us td{background:var(--accent-soft);font-weight:700}
+tr.us td:first-child{color:var(--accent-ink)}
+tr:last-child td{border-bottom:0}
+tr.total td{font-weight:800;border-top:2px solid var(--text)}
+.note{font-size:13px;color:var(--muted);margin:10px 0 0;max-width:80ch}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.est{border-color:var(--warn);color:var(--warn)}
+
+.assume{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0 0 28px}
+.assume div{background:var(--surface);padding:14px 16px}
+.assume b{display:block;font-size:22px;letter-spacing:-.02em}
+.assume span{font-size:13px;color:var(--muted)}
+
+/* services */
+.svc{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px}
+.svc h3{margin-top:0}
+.svc dl{margin:0}
+.svc dt{font-weight:700;margin-top:14px}
+.svc dd{margin:2px 0 0;color:var(--muted);font-size:15px}
+.svc dd em{font-style:normal;color:var(--text)}
+
+/* steps */
+.flow{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px;background:var(--code-bg);color:var(--code-text);padding:20px;border-radius:14px;overflow-x:auto;line-height:1.7;margin:0 0 36px;white-space:pre}
+ol.steps{list-style:none;padding:0;margin:0;counter-reset:s}
+ol.steps>li{counter-increment:s;display:grid;grid-template-columns:56px 1fr;gap:0 18px;padding:28px 0;border-top:1px solid var(--line)}
+ol.steps>li::before{content:counter(s);font-weight:900;font-size:34px;line-height:1;color:var(--accent);letter-spacing:-.03em}
+.steps h4{font-size:21px;margin:2px 0 6px;letter-spacing:-.01em}
+.steps .plain{margin:0 0 10px;max-width:66ch}
+.steps .done{font-size:14px;color:var(--good);margin:8px 0 0}
+details.prompt{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+details.prompt summary{cursor:pointer;padding:10px 14px;font-weight:600;font-size:14px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+details.prompt summary::-webkit-details-marker{display:none}
+details.prompt summary::after{content:"+";font-size:20px;color:var(--accent-ink)}
+details.prompt[open] summary::after{content:"–"}
+.prompt-body{position:relative;border-top:1px solid var(--line)}
+.prompt-body pre{margin:0;padding:16px 16px 16px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px;white-space:pre-wrap;word-break:break-word;background:var(--code-bg);color:var(--code-text);border-radius:0 0 12px 12px;max-height:420px;overflow:auto}
+.copy{position:absolute;top:10px;right:10px;background:var(--accent);color:#0a0a0a;border:0;font:600 13px "Figtree",sans-serif;padding:6px 12px;border-radius:999px;cursor:pointer}
+.copy:hover{filter:brightness(1.05)}
+
+.risks{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px 32px}
+.risks div{padding:14px 0;border-top:1px solid var(--line)}
+.risks b{display:block;margin-bottom:4px}
+.risks p{margin:0;color:var(--muted);font-size:15px}
+
+footer{padding:40px 0 64px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+footer p{max-width:90ch}
+
+@media (max-width:720px){
+  body{font-size:16px}
+  .top nav{display:none}
+  .hero{padding:48px 0 24px}
+  .row{grid-template-columns:96px 1fr 88px;gap:10px}
+  .row .name{font-size:13px}
+  .row .val{font-size:15px}
+  .sec-head{grid-template-columns:1fr}
+  .sec-head p{grid-column:1}
+  .sec-no{font-size:40px}
+  ol.steps>li{grid-template-columns:40px 1fr}
+  ol.steps>li::before{font-size:26px}
+  .scale{padding:20px 16px 16px}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#top">ztor<span>.</span></a>
+    <nav aria-label="Sections">
+      <a href="#tldr">TL;DR</a>
+      <a href="#stack">Stack &amp; cost</a>
+      <a href="#services">Services</a>
+      <a href="#build">How to build it</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+<div class="wrap">
+
+  <div class="hero">
+    <p class="kicker">Streaming stack proposal · Option 5B · September 2026</p>
+    <h1>Stream a 4K film for cents, not hundreds of dollars.</h1>
+    <p class="lede">Store and deliver every Ztor film on Cloudflare (R2 + CDN), lock paid rentals with DRM, and keep delivery cost close to zero. That leaves more of every rental for creators, co-creating fans and IP owners.</p>
+
+    <div class="scale" role="figure" aria-label="Cost to serve one 1-hour 4K film watched 1,000 times">
+      <h2>Cost to serve one 1-hour 4K film, watched 1,000 times in a month</h2>
+      <p class="sub">Encode once + store + deliver + DRM. Viewers in Taiwan / Hong Kong. USD.</p>
+
+      <div class="row"><div class="name">AWS</div><div class="track"><div class="bar range" style="width:100%;--lo:93.7%"></div></div><div class="val">$447–477<small>$0.45–0.48 / view</small></div></div>
+      <div class="row"><div class="name">Google Cloud</div><div class="track"><div class="bar range" style="width:78.4%;--lo:92%"></div></div><div class="val">$344–374<small>$0.34–0.37 / view</small></div></div>
+      <div class="row"><div class="name">Alibaba Cloud</div><div class="track"><div class="bar range" style="width:81.8%;--lo:75%"></div></div><div class="val">$293–390+<small>partial, see note</small></div></div>
+      <div class="row"><div class="name">Bunny Stream</div><div class="track"><div class="bar" style="width:28.5%"></div></div><div class="val">$136+<small>$0.14 / view</small></div></div>
+      <div class="row us"><div class="name">Cloudflare (5B)</div><div class="track"><div class="bar range" style="width:9%;--lo:28%"></div></div><div class="val">$12–43<small>$0.01–0.04 / view</small></div></div>
+
+      <p class="foot">Shaded part of each bar = the uncertain range. Shared monthly fees (DRM vendor base fee, $5 Workers plan) are not included here, because they are split across the whole catalog. Full math in section 2.</p>
+    </div>
+  </div>
+
+  <!-- 1 TLDR -->
+  <section class="block" id="tldr">
+    <div class="sec-head">
+      <div class="sec-no">1</div>
+      <h2>TL;DR</h2>
+      <p>What we gain, what it costs, and what could go wrong.</p>
+    </div>
+
+    <ul class="points">
+      <li><b>Delivery is the big bill, and Cloudflare makes it $0.</b> Every other provider charges for each GB sent to viewers. For one 4K film watched 1,000 times, that is $108 (Bunny) to $432 (AWS). With R2 + Cloudflare's CDN, it's a few cents in request fees.</li>
+      <li><b>About 90% cheaper per film than AWS or Google, and 70–90% cheaper than Bunny.</b> The money we don't spend on delivery stays in the revenue pool.</li>
+      <li><b>DRM becomes our biggest cost, so we negotiate it.</b> Every play needs a license. At $0.005 per license, one film costs about $10 a month in DRM. At the $0.02 list price, it's $40. We sign a volume contract before launch.</li>
+      <li><b>It is allowed.</b> Cloudflare's terms let us serve video through its CDN as long as the files are hosted on R2 or Stream. No Enterprise contract needed to start.</li>
+      <li><b>The trade-off is build work.</b> Bunny works in days. 5B takes weeks, because we connect encoding, packaging, DRM and players ourselves. Section 4 shows every step.</li>
+    </ul>
+
+    <h3>Side-by-side: one 1-hour 4K film, watched 1,000 times</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr>
+          <th>Provider</th><th class="num">Encode (once)</th><th class="num">Store / month</th><th class="num">Deliver 3.6 TB</th><th class="num">DRM (2,000 licenses)</th><th class="num">Total</th><th class="num">Per view</th><th>Built-in DRM?</th>
+        </tr></thead>
+        <tbody>
+          <tr><td>AWS</td><td class="num">≥ $4.50</td><td class="num">$0.69</td><td class="num">$432</td><td class="num">$10–40</td><td class="num">$447–477</td><td class="num">$0.45–0.48</td><td>Via a DRM partner</td></tr>
+          <tr><td>Alibaba Cloud</td><td class="num">quote</td><td class="num">~$0.60</td><td class="num">~$292–389</td><td class="num">quote</td><td class="num">≥ $293–390</td><td class="num">≥ $0.29</td><td>Yes (price not verified)</td></tr>
+          <tr><td>Google Cloud</td><td class="num">$9.00</td><td class="num">~$0.70</td><td class="num">$324</td><td class="num">$10–40</td><td class="num">$344–374</td><td class="num">$0.34–0.37</td><td>Via a DRM partner</td></tr>
+          <tr><td>Bunny Stream</td><td class="num">≥ $18</td><td class="num">$0.30–0.60</td><td class="num">$108</td><td class="num">$10</td><td class="num">~$136+</td><td class="num">~$0.14</td><td>Yes</td></tr>
+          <tr class="us"><td>Cloudflare (5B)</td><td class="num">~$1–2 <span class="tag est">estimate</span></td><td class="num">$0.45</td><td class="num">~$0.22</td><td class="num">$10–40</td><td class="num">$12–43</td><td class="num">$0.01–0.04</td><td>Via a DRM partner</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">
+      <b>How to read the gaps.</b>
+      AWS encode is the Basic-tier floor. DRM needs AWS's Professional tier, which costs more; the exact 4K rate was not verified.
+      Alibaba's delivery range comes from an older review, and its encode and DRM prices were not verified — get a quote.
+      Google storage is an approximate rate.
+      Bunny's free encoding stops at 1080p, so 4K needs its paid encoding; the 4K rate wasn't published in the sources used, so $18 uses the 1440p rate as a floor.
+      Cloudflare's encode cost is our own estimate, to be tested (section 4, step 11).
+    </p>
+  </section>
+
+  <!-- 2 STACK + COST -->
+  <section class="block" id="stack">
+    <div class="sec-head">
+      <div class="sec-no">2</div>
+      <h2>What we need, and what one 4K film costs</h2>
+      <p>Every part of the 5B stack, with its cost for the same film.</p>
+    </div>
+
+    <div class="assume" aria-label="Assumptions">
+      <div><b>1 hour</b><span>4K film (2160p)</span></div>
+      <div><b>5 quality levels</b><span>2160p · 1080p · 720p · 480p · 360p</span></div>
+      <div><b>~30 GB</b><span>stored: master file + streaming copies</span></div>
+      <div><b>1,000 views</b><span>in one month, full watch</span></div>
+      <div><b>~3.6 GB</b><span>per view (average ~8 Mbps)</span></div>
+      <div><b>2 licenses</b><span>per play (video key + audio key)</span></div>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Part</th><th>What it does (simple)</th><th>Tool</th><th>Math</th><th class="num">Cost for this film</th></tr></thead>
+        <tbody>
+          <tr><td>Storage</td><td>Keeps the master file and the streaming copies</td><td>Cloudflare R2</td><td>30 GB × $0.015</td><td class="num">$0.45 / month</td></tr>
+          <tr><td>Saving files</td><td>Each chunk we write counts as a small request</td><td>R2 write requests</td><td>~4,000 writes × $4.50 per million</td><td class="num">~$0.02 (once)</td></tr>
+          <tr><td>Delivery</td><td>Sends video to viewers from the nearest city</td><td>Cloudflare CDN</td><td>3.6 TB × $0</td><td class="num">$0</td></tr>
+          <tr><td>Cache misses</td><td>When the CDN doesn't have a chunk yet, it reads R2</td><td>R2 read requests</td><td>≤ 600,000 reads × $0.36 per million</td><td class="num">≤ $0.22</td></tr>
+          <tr><td>Encoding</td><td>Turns one 4K file into 5 sizes, so video never buffers</td><td>FFmpeg on Cloudflare Containers</td><td>~3–5 hours on 4 vCPU; CPU $0.00002/vCPU-sec + memory</td><td class="num">~$1–2 <span class="tag est">estimate</span></td></tr>
+          <tr><td>Packaging + lock</td><td>Cuts video into small chunks (HLS/DASH) and scrambles them</td><td>Shaka Packager (free, open source)</td><td>Runs inside the same container</td><td class="num">$0</td></tr>
+          <tr><td>DRM keys</td><td>Gives the unlock key only to people who paid</td><td>DRM vendor (EZDRM / BuyDRM / DoveRunner / Axinom)</td><td>2,000 × $0.005–0.02</td><td class="num">$10–40</td></tr>
+          <tr><td>Access checks</td><td>Checks the popcorn payment before handing out a key or link</td><td>Cloudflare Workers</td><td>A few thousand requests</td><td class="num">~$0 (inside the $5 plan; to confirm)</td></tr>
+          <tr><td>Players</td><td>Plays locked video on web, iPhone and Android</td><td>Shaka Player · AVPlayer · Media3</td><td>Free</td><td class="num">$0</td></tr>
+          <tr class="total"><td colspan="4">Total for one 4K film, 1,000 views</td><td class="num">~$12–43</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Shared monthly fees (paid once, not per film)</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Item</th><th>Why</th><th class="num">Monthly</th></tr></thead>
+        <tbody>
+          <tr><td>Workers Paid plan</td><td>Needed for Workers, Containers, Queues</td><td class="num">$5</td></tr>
+          <tr><td>DRM vendor base fee</td><td>Most vendors charge a platform fee (e.g. EZDRM from $199.99, BuyDRM from $99)</td><td class="num">$99–200+</td></tr>
+          <tr><td>Cloudflare zone plan</td><td>Optional: Pro or Business for extra firewall and support</td><td class="num">$0–200</td></tr>
+          <tr><td>Apple FairPlay package</td><td>Needed to lock video on iPhone and Mac</td><td class="num">$0 (needs Apple approval)</td></tr>
+          <tr><td>Cloudflare Stream (free content only)</td><td>Trailers, Z-ORIGIN AI shorts, community clips</td><td class="num">$5 per 1,000 min stored + $1 per 1,000 min watched</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout"><strong>Break-even:</strong> Bunny also charges a $99/month DRM base fee, so 5B's extra shared cost is only about $5–300 a month (Workers plan, a pricier DRM vendor, an optional zone plan). Each 4K film like this saves about $90–120 versus Bunny, so 5B pays for its extra fees at roughly 1–3 films a month. The one-time build work is separate and not sized yet.</div>
+  </section>
+
+  <!-- 3 SERVICES -->
+  <section class="block" id="services">
+    <div class="sec-head">
+      <div class="sec-no">3</div>
+      <h2>The services we use</h2>
+      <p>One Cloudflare account covers most of it. Four outside pieces fill the gaps.</p>
+    </div>
+
+    <div class="svc">
+      <div>
+        <h3>On Cloudflare</h3>
+        <dl>
+          <dt>R2</dt><dd>Two buckets. <em>ztor-masters</em> (private: original uploads) and <em>ztor-streams</em> (encrypted video chunks, served through the CDN).</dd>
+          <dt>R2 event notifications</dt><dd>Says "a new file arrived" the moment a creator finishes uploading.</dd>
+          <dt>Queues</dt><dd>A waiting line for encoding jobs, so nothing gets lost when many uploads arrive at once.</dd>
+          <dt>Workflows</dt><dd>Runs each job step by step and retries a step if it fails.</dd>
+          <dt>Containers</dt><dd>Runs FFmpeg + Shaka Packager, the heavy video work. Sleeps (and costs nothing) when idle.</dd>
+          <dt>Workers</dt><dd>Small programs for upload links, payment checks, signed video links and the DRM key gate.</dd>
+          <dt>D1</dt><dd>A small database: film ID, encoding status, key IDs, who rented what.</dd>
+          <dt>CDN + custom domain + cache rules</dt><dd>Serves chunks from the nearest city (including Taipei and Phnom Penh). Chunks cached for a long time, playlists for a short time.</dd>
+          <dt>WAF / rate limiting</dt><dd>Blocks abuse of the key and link endpoints.</dd>
+          <dt>Stream (free content only)</dt><dd>For trailers and free clips. It can't do real DRM, and files it encodes must be served by Stream, so paid films never go through it.</dd>
+        </dl>
+      </div>
+      <div>
+        <h3>Outside Cloudflare</h3>
+        <dl>
+          <dt>DRM license service</dt><dd>EZDRM, BuyDRM, DoveRunner or Axinom. Issues Widevine, FairPlay and PlayReady keys. <em>Pick by quote.</em></dd>
+          <dt>FFmpeg</dt><dd>Free encoder. Makes the 5 quality levels.</dd>
+          <dt>Shaka Packager</dt><dd>Free. Cuts video into chunks and encrypts them with keys from the DRM vendor.</dd>
+          <dt>Players</dt><dd>Shaka Player (web), AVPlayer (iPhone/iPad), Media3 (Android). All free.</dd>
+          <dt>Apple FairPlay deployment package</dt><dd>Apple must approve it before iPhones can play locked video. Start this first, since it takes time.</dd>
+        </dl>
+
+        <div class="callout"><strong>Rule of thumb:</strong> free video goes to Stream. Paid video goes to R2 + DRM. Never mix the two for the same file.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 BUILD -->
+  <section class="block" id="build">
+    <div class="sec-head">
+      <div class="sec-no">4</div>
+      <h2>How to build it, step by step</h2>
+      <p>Each step says what it does in plain words, then gives a prompt you can paste into Claude Code. Do them in order.</p>
+    </div>
+
+<pre class="flow" aria-label="Flow diagram">Creator uploads ─▶ R2 (masters) ─▶ event ─▶ Queue ─▶ Workflow
+                                                        │
+                                                        ▼
+                                  Container: FFmpeg (5 sizes) + Shaka Packager (lock)
+                                                        │   ▲ keys from DRM vendor
+                                                        ▼
+Fan pays popcorn ─▶ Worker (token) ─▶ Player ─▶ CDN ─▶ R2 (streams)
+                                         │
+                                         └─▶ Worker (key gate) ─▶ DRM vendor ─▶ key ─▶ video plays</pre>
+
+    <ol class="steps">
+
+      <li><div>
+        <h4>Open the accounts</h4>
+        <p class="plain">Like getting the keys to a building before moving in. Create the Cloudflare account on the $5 Workers Paid plan, pick a DRM vendor, and request Apple's FairPlay package today, because Apple takes the longest.</p>
+        <p class="done">Done when: you can log into Cloudflare and the DRM vendor dashboard, and the Apple request is sent.</p>
+      </div></li>
+
+      <li><div>
+        <h4>Make two storage boxes</h4>
+        <p class="plain">One private box for original films, one box for the locked chunks viewers stream. Connect the second box to a video subdomain (e.g. media.yourdomain.com) so the CDN serves it.</p>
+        <details class="prompt"><summary>Prompt for Claude Code</summary><div class="prompt-body"><button class="copy" type="button">Copy</button><pre>Set up a Cloudflare Workers project with Wrangler for "ztor-video".
+Create two R2 buckets:
+1. ztor-masters — private, no public access.
+2. ztor-streams — connected to a custom domain (placeholder: media.example.com).
+Add both bucket bindings to wrangler.toml.
+Add a cache rule plan: *.m4s / *.ts / *.mp4 cached 1 year (immutable), *.m3u8 / *.mpd cached 60 seconds.
+Explain each command before running it. Don't make ztor-masters public.</pre></div></details>
+        <p class="done">Done when: a test file in ztor-streams opens at the custom domain, and ztor-masters is not reachable from the internet.</p>
+      </div></li>
+
+      <li><div>
+        <h4>Let creators upload big files safely</h4>
+        <p class="plain">A Worker hands the creator a one-time upload link, so the huge file goes straight into storage without passing through our servers.</p>
+        <details class="prompt"><summary>Prompt for Claude Code</summary><div class="prompt-body"><button class="copy" type="button">Copy</button><pre>Build a Worker endpoint POST /uploads that:
+- requires a logged-in creator (stub the auth check with a TODO),
+- creates a film record in D1 (table films: id, creator_id, title, status, created_at),
+- starts an R2 multipart upload in ztor-masters at key masters/{filmId}/source.mp4,
+- returns presigned part-upload URLs valid for 1 hour.
+Add POST /uploads/{filmId}/complete to finish the multipart upload.
+Include the D1 schema migration and a tiny test script that uploads a 200 MB file.</pre></div></details>
+        <p class="done">Done when: a 2 GB test file lands in ztor-masters and its film record shows status "uploaded".</p>
+      </div></li>
+
+      <li><div>
+        <h4>Ring a bell when a film arrives</h4>
+        <p class="plain">When the upload finishes, storage automatically puts a "please encode me" ticket in a waiting line.</p>
+        <details class="prompt"><summary>Prompt for Claude Code</summary><div class="prompt-body"><button class="copy" type="button">Copy</button><pre>Configure an R2 event notification on ztor-masters for object-create events with prefix "masters/".
+Send events to a Cloudflare Queue named encode-jobs.
+Write a queue consumer Worker that reads each message, finds the filmId from the key,
+sets films.status = "queued" in D1, and starts a Cloudflare Workflow named encode-film with { filmId, key }.
+Make it safe to receive the same event twice (idempotent).</pre></div></details>
+        <p class="done">Done when: uploading a file changes its status to "queued" within a few seconds.</p>
+      </div></li>
+
+      <li><div>
+        <h4>Build the video machine</h4>
+        <p class="plain">A container holds two free tools. FFmpeg shrinks the film into 5 sizes so it plays smoothly on any internet speed. Shaka Packager chops it into small pieces and scrambles them.</p>
+        <details class="prompt"><summary>Prompt for Claude Code</summary><div class="prompt-body"><button class="copy" type="button">Copy</button><pre>Create a Docker image for Cloudflare Containers (instance type standard-4) containing ffmpeg and shaka-packager.
+Add a small HTTP server (Node, no extra deps) with POST /encode that receives:
+  sourceUrl (presigned GET for the master), uploadBaseUrl info (presigned PUT URLs or a Worker upload endpoint), keys (from step 6).
+The container has NO R2 binding — only use the presigned URLs it is given.
+Steps:
+1. ffmpeg: encode an H.264 ladder, 2-second GOP aligned across renditions:
+   2160p ~16 Mbps, 1080p ~6 Mbps, 720p ~3 Mbps, 480p ~1.5 Mbps, 360p ~0.8 Mbps, plus AAC audio 128 kbps.
+2. shaka-packager: output CMAF with HLS + DASH manifests, 6-second segments,
+   encryption cbcs (works for FairPlay, Widevine and PlayReady), using the key IDs and keys passed in.
+3. Upload every output to films/{filmId}/ in ztor-streams, then delete local temp files.
+Log how many minutes each step took (we need this to check cost).</pre></div></details>
+        <p class="done">Done when: a 10-minute test clip turns into playable (but locked) chunks in ztor-streams.</p>
+      </div></li>
+
+      <li><div>
+        <h4>Get the locks from the DRM vendor</h4>
+        <p class="plain">Before scrambling, we ask the DRM vendor for a new lock and key for this film. They keep the key safe; we only save the lock's ID.</p>
+        <details class="prompt"><summary>Prompt for Claude Code</summary><div class="prompt-body"><button class="copy" type="button">Copy</button><pre>In the encode-film Workflow, add a step "get-keys":
+- call our DRM vendor's CPIX / key API (vendor: [EZDRM | BuyDRM | DoveRunner | Axinom] — read their docs) to create
+  one key for video and one for audio for filmId,
+- request Widevine, PlayReady and FairPlay signaling data,
+- store only key IDs (never the raw keys) in D1 table film_keys,
+- pass keys to the container /encode call over HTTPS only, never log them.
+Then add steps: "encode" (calls the container), "verify" (checks manifests exist), "publish" (status = "ready").
+Retry each step up to 3 times with backoff.</pre></div></details>
+        <p class="done">Done when: the film status reaches "ready" and D1 holds key IDs but no raw keys.</p>
+      </div></li>
+
+      <li><div>
+        <h4>Check the ticket before the movie</h4>
+        <p class="plain">When a fan pays with popcorn, a Worker gives them a short-lived pass. No pass means no playlist and no key.</p>
+        <details class="prompt"><summary>Prompt for Claude Code</summary><div class="prompt-body"><button class="copy" type="button">Copy</button><pre>Build Worker endpoint POST /play/{filmId}:
+- check the user is logged in and has an active rental for filmId (stub the popcorn/rental check behind a function hasRental(userId, filmId)),
+- if yes, return a signed JWT (expires in 4 hours) with userId, filmId, deviceId,
+  plus the manifest URLs (HLS + DASH) with a signed query token,
+- if no, return 402 with message "Rent this film to watch it."
+Add a Worker in front of media.example.com that rejects manifest requests without a valid token.
+Segments can stay public-cached because they are encrypted.</pre></div></details>
+        <p class="done">Done when: a user without a rental gets 402, and a user with one gets working playlist links.</p>
+      </div></li>
+
+      <li><div>
+        <h4>Guard the key door</h4>
+        <p class="plain">The player asks for the key. Our Worker checks the pass, then asks the DRM vendor to hand the key to that device only.</p>
+        <details class="prompt"><summary>Prompt for Claude Code</summary><div class="prompt-body"><button class="copy" type="button">Copy</button><pre>Build Worker endpoint POST /license/{drm} where drm is widevine | fairplay | playready:
+- require the JWT from /play,
+- rate-limit to 10 requests per minute per user,
+- forward the license request to the DRM vendor using their token/proxy method,
+  with a policy: rental window 48 hours, no offline download for now, HDCP required for 2160p,
+- log one row per license in D1 (userId, filmId, drm, time) so we can match the vendor's invoice,
+- return the vendor response unchanged.</pre></div></details>
+        <p class="done">Done when: the D1 license log count matches the vendor dashboard for a test day.</p>
+      </div></li>
+
+      <li><div>
+        <h4>Hook up the players</h4>
+        <p class="plain">Each device family uses its own lock system, so each app gets the player that speaks its language.</p>
+        <details class="prompt"><summary>Prompt for Claude Code</summary><div class="prompt-body"><button class="copy" type="button">Copy</button><pre>Web: integrate Shaka Player. Use DASH + Widevine on Chrome/Android/Edge/Firefox and HLS + FairPlay on Safari.
+Point license servers to /license/widevine and /license/fairplay, and send the JWT in a header.
+iOS: AVPlayer with AVContentKeySession for FairPlay, fetching the certificate and license through our Worker.
+Android: Media3 ExoPlayer with DefaultDrmSessionManager for Widevine, license URL = our Worker.
+Show a clear message if the device can't play 4K: "This device plays up to 1080p."
+Use the shared Ztor component library for all buttons and controls.</pre></div></details>
+        <p class="done">Done when: the same rented film plays on Chrome, Safari, an iPhone and an Android phone.</p>
+      </div></li>
+
+      <li><div>
+        <h4>Add free content on Stream</h4>
+        <p class="plain">Trailers and free clips don't need locks, so they go on Cloudflare Stream, which encodes and plays them for us.</p>
+        <details class="prompt"><summary>Prompt for Claude Code</summary><div class="prompt-body"><button class="copy" type="button">Copy</button><pre>Add a Cloudflare Stream upload path for free content only (trailers, Z-ORIGIN AI shorts, community clips).
+Store stream_uid on the film or post record in D1. Use the Stream player for these.
+Add a guard: any content marked paid must never be uploaded to Stream.</pre></div></details>
+        <p class="done">Done when: a trailer plays via Stream, and uploading a paid film to Stream is blocked.</p>
+      </div></li>
+
+      <li><div>
+        <h4>Test before launch</h4>
+        <p class="plain">We measure real speed and real cost, because some numbers in this page are estimates.</p>
+        <ul class="points">
+          <li>Encode a real 1-hour 4K film, time it and compare the bill with the ~$1–2 estimate. If it's too slow, move encoding to a rented server.</li>
+          <li>Try to screen-record a locked film on each device. Protected devices should record a black screen.</li>
+          <li>Measure start time and buffering from Taipei, Hong Kong, Phnom Penh and an African city.</li>
+          <li>Check that the license count and cost match the DRM vendor invoice.</li>
+        </ul>
+        <p class="done">Done when: all four checks pass, or each gap has a fix owner.</p>
+      </div></li>
+
+      <li><div>
+        <h4>Launch and watch the meters</h4>
+        <p class="plain">Go live with a small founding group of creators first, then open it up.</p>
+        <ul class="points">
+          <li>Weekly: DRM licenses per play (should stay near 2), cache hit rate (aim above 95%), encode minutes per film.</li>
+          <li>Alert if license requests spike, which can mean someone is abusing the key door.</li>
+        </ul>
+      </div></li>
+
+    </ol>
+  </section>
+
+  <!-- risks -->
+  <section class="block" id="risks">
+    <div class="sec-head">
+      <div class="sec-no">!</div>
+      <h2>Risks and how we handle them</h2>
+      <p>Known unknowns, with the fix for each.</p>
+    </div>
+    <div class="risks">
+      <div><b>DRM price decides the win</b><p>At list price, DRM can cost more than Bunny's. Fix: get quotes from 4 vendors and sign a volume rate near $0.005 per license before launch.</p></div>
+      <div><b>4K is slow to encode</b><p>Cloudflare Containers top out at 4 vCPU, so a 4K film may take hours. Fix: time it in step 11; move to a rented server if needed.</p></div>
+      <div><b>4K needs the strongest lock</b><p>Studios usually require hardware-level DRM and HDCP for 4K. Weaker devices get 1080p. Fix: set the policy in step 8 and tell users clearly.</p></div>
+      <div><b>Apple approval takes time</b><p>No FairPlay means no locked playback on iPhone. Fix: request it on day 1.</p></div>
+      <div><b>Estimates, not quotes</b><p>Encode cost, Alibaba prices and some request counts are estimates. Fix: step 11 replaces them with real numbers.</p></div>
+      <div><b>We run more parts ourselves</b><p>More pieces than an all-in-one service. Fix: Eric's team owns the pipeline; the Revenue Engine only receives play and license events.</p></div>
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><b>Sources:</b> public pricing from AWS (MediaConvert, CloudFront), Google Cloud (Transcoder API, Cloud CDN), Alibaba Cloud (CDN, ApsaraVideo VOD), bunny.net (CDN, Stream, MediaCage DRM), Cloudflare (R2, Stream, Containers, service-specific terms), and DRM vendor summaries (EZDRM, BuyDRM, DoveRunner, Axinom), checked September 2026. Prices change — confirm before signing anything.</p>
+    <p>ztor. — own the rails, not the content. Internal proposal by Pathfinders.</p>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.copy').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var text = btn.parentElement.querySelector('pre').innerText;
+    var done = function(){ btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1500); };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function(){ btn.textContent = 'Select and copy'; });
+      } else { btn.textContent = 'Select and copy'; }
+    } catch (e) { btn.textContent = 'Select and copy'; }
+  });
+});
+</script>
+</body>
+</html>

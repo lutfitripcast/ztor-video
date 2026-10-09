@@ -1,0 +1,35 @@
+import { chromium } from "playwright";
+const B = process.env.BASE_URL ?? "https://ztor-video.mluthfi840.workers.dev", FILM = process.env.FILM ?? "439662d9-e97b-44f5-9ae1-7bd346553e4b";
+const APP = "2ed55f309dc460453ab0b9157b6496c2", SECRET = process.env.SFU_SECRET;
+const j = async (m, p, body, h = {}) => { const r = await fetch(B + p, { method: m, headers: { "content-type": "application/json", ...h }, body: body ? JSON.stringify(body) : undefined }); return { s: r.status, b: await r.json().catch(() => null) }; };
+const sfuSession = async (sid) => { const r = await fetch(`https://rtc.live.cloudflare.com/v1/apps/${APP}/sessions/${sid}`, { headers: { authorization: "Bearer " + SECRET } }); const b = await r.json().catch(() => null); return { s: r.status, tracks: b?.tracks?.map(t => `${t.location}:${t.trackName}@${t.mid}:${t.status}`), err: b?.errorCode }; };
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const out = (k, v) => console.log(k.padEnd(30), typeof v === "string" ? v : JSON.stringify(v));
+const c = await j("POST", "/party", { hostId: "host-1", filmId: FILM, title: "restart test" }); const id = c.b.partyId; out("party", id);
+const browser = await chromium.launch({ channel: "chrome", headless: true, args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream", "--autoplay-policy=no-user-gesture-required"] });
+const ctx = await browser.newContext({ permissions: ["camera", "microphone"] });
+const logOf = (page) => page.evaluate(() => document.getElementById("log").textContent);
+const waitLog = async (page, re, ms = 20000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (re.test(await logOf(page))) return true; await sleep(300); } return false; };
+const bad = []; const hook = (pg, who) => pg.on("response", r => { if (r.status() >= 400) bad.push(`${who} ${r.status()} ${r.url().replace(B, "")}`); });
+const dump = (pg) => pg.evaluate(async () => { const rows = []; for (const [hs, c] of viewerConns) { const st = await c.pc.getStats(); const inb = []; st.forEach(s => { if (s.type === "inbound-rtp") inb.push(`${s.kind}:mid${s.mid ?? "?"}:${s.bytesReceived}B`); }); rows.push({ host: hs.slice(0, 8), state: c.pc.connectionState, inbound: inb }); }
+  return { conns: rows, cam: getComputedStyle(document.getElementById("cam")).display, feed: document.getElementById("rtc").textContent, kbps: document.getElementById("kbps").textContent }; });
+const hdump = (pg) => pg.evaluate(async () => { const rows = []; for (const [g, e] of hostGroups) { const st = await e.pc.getStats(); const o = []; st.forEach(s => { if (s.type === "outbound-rtp") o.push(`${s.kind}:mid${s.mid ?? "?"}:${s.bytesSent}B`); }); rows.push({ group: g, session: e.sessionId.slice(0, 8), state: e.pc.connectionState, outbound: o }); } return rows; });
+
+const host = await ctx.newPage(); hook(host, "host"); await host.goto(`${B}/watch?party=${id}&user=host-1`); await waitLog(host, /room connected/);
+await host.click("#bCam"); out("publish #1", await waitLog(host, /published cam, mic/));
+const fan = await ctx.newPage(); hook(fan, "fan"); await fan.goto(`${B}/watch?party=${id}&user=fan-1`); await waitLog(fan, /room connected/); await fan.click("#bGate");
+out("fan receives #1", await waitLog(fan, /receiving mic/));
+await sleep(4000); out("fan after #1", await dump(fan)); out("host after #1", await hdump(host));
+const hs1 = await host.evaluate(() => hostGroups.get("cam").sessionId);
+await host.click("#bCam"); out("stop #1", await waitLog(host, /stopped cam, mic -> 200/)); await sleep(3000);
+out("fan after stop", await dump(fan)); out("host after stop", await hdump(host)); out("SFU old host session", await sfuSession(hs1));
+await host.click("#bCam"); out("publish #2", await waitLog(host, /published cam, mic[\s\S]*published cam, mic/));
+out("fan receives #2", await waitLog(fan, /receiving cam \(video\)[\s\S]*receiving cam \(video\)/, 30000)); await sleep(6000);
+out("fan after #2", await dump(fan)); out("host after #2", await hdump(host));
+const hs2 = await host.evaluate(() => hostGroups.get("cam")?.sessionId); out("SFU new host session", hs2 ? await sfuSession(hs2) : null);
+await sleep(3000); out("fan 3 s later", (await dump(fan)).conns);
+console.log("---- host log tail ----\n" + (await logOf(host)).split("\n").slice(-6).join("\n"));
+console.log("---- fan log tail ----\n" + (await logOf(fan)).split("\n").slice(-8).join("\n"));
+console.log("---- 4xx responses ----\n" + (bad.join("\n") || "none"));
+await j("POST", `/party/${id}/end`, {}, { authorization: "Bearer " + (await host.evaluate(() => me.token)) });
+await browser.close();

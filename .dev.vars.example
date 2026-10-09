@@ -1,0 +1,10 @@
+# Secrets for `wrangler dev`. Copy to .dev.vars (ignored by git). In production set each one with `wrangler secret put NAME`.
+JWT_SECRET=            # signs the 4-hour play passes and party tickets (any long random string)
+RUNNER_TOKEN=          # bearer token the encoder runner and the /admin routes use
+REALTIME_APP_SECRET=   # Cloudflare Realtime SFU app secret (the app id is in wrangler.jsonc)
+DRM_COM_KEY_ID=        # Axinom DRM communication key id
+DRM_COM_KEY=           # Axinom DRM communication key (base64)
+# optional
+TEST_KEY=              # when set, the test console must send it as x-test-key
+TURN_KEY_ID=           # Cloudflare Realtime TURN key (viewers behind strict NATs)
+TURN_KEY_API_TOKEN=

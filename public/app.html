@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ztor.</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.12.6/shaka-player.compiled.min.js"></script>
+<style>
+  :root{--bg:#0a0a0a;--surface:#141414;--surface2:#1b1b1b;--line:#262626;--fg:#f4f1ec;--muted:#a39e96;--accent:#ffa33f;--accent-soft:#2a1c0c;--good:#5fd394;--bad:#ff6b6b;--live:#ff3b5c}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  button{font:inherit;font-weight:700;padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);cursor:pointer}
+  button.primary{background:var(--accent);color:#0a0a0a;border-color:var(--accent)}
+  button.ghost{background:transparent}
+  button.on{background:#1f3a2a;border-color:var(--good);color:var(--good)}
+  button.danger{border-color:var(--bad);color:var(--bad)}
+  button.sm{padding:5px 10px;font-size:13px}
+  button:disabled{opacity:.45;cursor:default}
+  input,select{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0f0f0f;color:var(--fg);width:100%}
+  label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
+  .ok{color:var(--good)}.no{color:var(--bad)}.dim{color:var(--muted)}
+  nav{position:sticky;top:0;z-index:5;background:rgba(10,10,10,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  nav .in{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:10px 16px}
+  .logo{font-size:22px;font-weight:800;letter-spacing:-.03em}.logo span{color:var(--accent)}
+  nav a.link{color:var(--fg);padding:6px 10px;border-radius:8px;font-weight:600}
+  nav a.link.active{background:var(--surface2)}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);font-size:13px}
+  .role{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:#222;color:var(--muted)}
+  .role.admin{background:#3a1f1f;color:#ff8a8a}.role.host{background:#1f3a2a;color:var(--good)}.role.user{background:#222;color:var(--muted)}
+  main{max-width:1280px;margin:0 auto;padding:18px 16px 60px}
+  h1{font-size:26px;letter-spacing:-.03em;margin:6px 0 4px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:22px 0 10px;font-weight:700}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .auth{max-width:420px;margin:40px auto}
+  .tabs{display:flex;gap:6px;margin-bottom:8px}.tabs button{flex:1}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  .film{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+  .poster{aspect-ratio:16/9;display:flex;align-items:flex-end;padding:12px;font-size:34px;font-weight:800;letter-spacing:-.04em;color:rgba(255,255,255,.85)}
+  .film .body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;flex:1}
+  .film .t{font-weight:700;line-height:1.3}
+  .badges{display:flex;gap:6px;flex-wrap:wrap}.badge{font-size:11px;font-weight:800;letter-spacing:.06em;padding:3px 8px;border-radius:999px;background:#222;color:var(--muted)}
+  .badge.live{background:var(--live);color:#fff}.badge.accent{background:var(--accent-soft);color:var(--accent)}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+  .parties{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+  .party{background:linear-gradient(135deg,#1b1410,#141414);border:1px solid #3a2a14;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px}
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:13px}.row b{color:var(--fg)}
+  .stage{display:grid;grid-template-columns:1fr 360px;gap:16px}
+  @media (max-width:980px){.stage{grid-template-columns:1fr}}
+  .screen{position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:16/9}
+  .screen video{width:100%;height:100%;display:block;background:#000}
+  #cam{position:absolute;right:10px;bottom:10px;width:20%;min-width:130px;max-width:210px;height:auto;aspect-ratio:16/9;border-radius:10px;border:2px solid rgba(255,255,255,.25);background:#000;object-fit:cover;display:none;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+  #micPill{position:absolute;right:10px;bottom:10px;display:none;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(20,20,20,.85);border:1px solid var(--line);font-size:12px;font-weight:700}
+  #micPill i{width:8px;height:8px;border-radius:50%;background:var(--good);display:inline-block;animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  #gate{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6)}
+  #gate button{font-size:17px;padding:13px 24px}
+  .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+  .ctl{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  .chat{display:flex;flex-direction:column;height:640px}
+  @media (max-width:980px){.chat{height:420px}}
+  #pinned{background:var(--accent-soft);color:var(--accent);border:1px solid #4a2f10;border-radius:10px;padding:8px 10px;font-size:13px;margin-bottom:8px;display:none}#pinned b{color:var(--fg)}
+  #msgs{flex:1;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px;background:#0f0f0f;font-size:14px}
+  .m{padding:5px 2px;border-bottom:1px solid #1b1b1b;display:flex;gap:6px;align-items:flex-start}
+  .m .who{color:var(--accent);font-weight:700;white-space:nowrap}.m .who.host{color:var(--good)}
+  .m .txt{flex:1;word-break:break-word}.m .act{display:none;gap:4px}.m:hover .act{display:flex}
+  .m .act button{padding:1px 7px;font-size:11px;font-weight:600}.m.sys{color:var(--muted);font-style:italic}
+  .compose{display:flex;gap:8px;margin-top:8px}.compose input{flex:1}
+  .hostbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:13px;color:var(--muted)}.hostbar select{width:auto;padding:4px 8px}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px}
+  details.log{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+  details.log summary{cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  pre{background:#0f0f0f;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-all;max-height:280px;overflow:auto;margin:10px 0 0}
+  .checks{display:grid;gap:6px;margin-top:8px;font-size:14px}.checks div{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:7px 0}
+  .checks span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+  table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+  td select{width:auto;padding:6px 10px}
+  #toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:9}
+  .toast{background:#1c1c1c;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:10px 14px;max-width:360px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  .toast.bad{border-left-color:var(--bad)}.toast.good{border-left-color:var(--good)}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:8;padding:16px}
+  .modal .card{width:100%;max-width:440px}
+  #policy{margin:0 0 10px;padding:9px 13px;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:14px}
+  .empty{color:var(--muted);padding:26px;text-align:center;border:1px dashed var(--line);border-radius:16px}
+</style>
+</head>
+<body>
+<nav><div class="in">
+  <a class="logo" href="#/home">ztor<span>.</span></a>
+  <span id="navLinks"></span>
+  <span style="flex:1"></span>
+  <span id="navUser"></span>
+</div></nav>
+<main id="view"></main>
+<div id="toasts"></div>
+<div class="modal" id="modal"><div class="card" id="modalBody"></div></div>
+
+<script>
+// ---- shared helpers -------------------------------------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const api = async (method, path, body, headers = {}) => {
+  const r = await fetch(path, { method, headers: { 'content-type': 'application/json', ...headers }, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
+  let j = null; try { j = await r.clone().json(); } catch { j = await r.text(); }
+  return { status: r.status, body: j };
+};
+const toast = (msg, kind = '') => { const d = document.createElement('div'); d.className = `toast ${kind}`; d.textContent = msg; $('toasts').appendChild(d); setTimeout(() => d.remove(), 5000); };
+const LOG = []; let logEl = null;
+const log = (m) => { const line = `[${new Date().toISOString().slice(11, 19)}] ${m}`; LOG.push(line); if (LOG.length > 400) LOG.shift(); if (logEl) { logEl.textContent += line + '\n'; logEl.scrollTop = logEl.scrollHeight; } };
+const bindLog = (el) => { logEl = el; if (el) { el.textContent = LOG.slice(-200).join('\n') + '\n'; el.scrollTop = el.scrollHeight; } };
+const deviceId = 'web-' + navigator.userAgent.slice(0, 20);
+const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+const fmt = (iso) => iso ? iso.slice(0, 16).replace('T', ' ') + ' UTC' : '-';
+const hue = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+let me = null;   // { id, email, name, role }
+
+// ---- router ------------------------------------------------------------------------------------------------------
+const routes = {};
+// One session cookie per browser: if another tab signs in as someone else, this tab must follow, not keep acting as the
+// old account (reported 2026-09-25: "admin rents, host gets the rental"). Re-check identity on every navigation and on focus.
+async function whoAmI() { const r = await api('GET', '/auth/me'); return r.status === 200 ? r.body.user : null; }
+async function syncIdentity(quiet) {
+  const u = await whoAmI();
+  if ((u?.id || null) === (me?.id || null)) { if (u) me = u; return false; }
+  const was = me; me = u;
+  if (!quiet) toast(u ? `This browser is now signed in as ${u.name}${was ? ' (was ' + was.name + ')' : ''}.` : 'Signed out in another tab.', 'bad');
+  return true;
+}
+document.addEventListener('visibilitychange', async () => { if (!document.hidden && await syncIdentity()) route(); });
+window.addEventListener('focus', async () => { if (await syncIdentity()) route(); });
+let routeSeq = 0;
+async function route() {
+  const seq = ++routeSeq;
+  await teardown();
+  await syncIdentity(true);
+  if (seq !== routeSeq) return;   // a newer navigation superseded this one
+  const [path, ...rest] = location.hash.replace(/^#\/?/, '').split('/');
+  if (!me && path !== 'login') { location.hash = '#/login'; return; }
+  if (me && (path === 'login' || !path)) { location.hash = '#/home'; return; }
+  renderNav(path);
+  const fn = routes[path] || routes.home;
+  await fn(rest);
+}
+window.addEventListener('hashchange', route);
+let cleanup = null;
+async function teardown() { if (cleanup) { const c = cleanup; cleanup = null; try { await c(); } catch {} } logEl = null; }
+function renderNav(path) {
+  $('navLinks').innerHTML = me ? `<a class="link ${path === 'home' ? 'active' : ''}" href="#/home">Home</a>${me.role === 'admin' ? `<a class="link ${path === 'admin' ? 'active' : ''}" href="#/admin">Admin</a>` : ''}` : '';
+  $('navUser').innerHTML = me ? `<span class="chip">${esc(me.name)} <span class="role ${me.role}">${me.role}</span> <button class="sm ghost" id="bOut">Sign out</button></span>` : '';
+  const b = $('bOut'); if (b) b.onclick = async () => { await api('POST', '/auth/logout'); me = null; location.hash = '#/login'; };
+}
+
+// ---- login / register -------------------------------------------------------------------------------------------
+routes.login = async () => {
+  $('view').innerHTML = `<div class="auth card">
+    <div class="logo" style="margin-bottom:6px">ztor<span>.</span></div>
+    <p class="dim" style="margin:0 0 14px">Films with real DRM, and watch parties with the host live on camera.</p>
+    <div class="tabs"><button id="tIn" class="primary">Sign in</button><button id="tUp">Create account</button></div>
+    <div id="fIn"><label>Email</label><input id="iEmail" type="email" autocomplete="email"><label>Password</label><input id="iPass" type="password" autocomplete="current-password">
+      <div class="ctl"><button id="bIn" class="primary" style="flex:1">Sign in</button></div></div>
+    <div id="fUp" hidden><label>Display name</label><input id="uName" autocomplete="nickname"><label>Email</label><input id="uEmail" type="email" autocomplete="email"><label>Password (8+ characters)</label><input id="uPass" type="password" autocomplete="new-password">
+      <div class="ctl"><button id="bUp" class="primary" style="flex:1">Create account</button></div>
+      <p class="hint">The first account created becomes the admin. Everyone after that starts as a viewer; an admin can make you a host.</p></div>
+    <p id="authErr" class="no" style="margin:10px 0 0;min-height:1.4em"></p></div>`;
+  const show = (up) => { $('fIn').hidden = up; $('fUp').hidden = !up; $('tIn').classList.toggle('primary', !up); $('tUp').classList.toggle('primary', up); $('authErr').textContent = ''; };
+  $('tIn').onclick = () => show(false); $('tUp').onclick = () => show(true);
+  const done = (r) => { if (r.status !== 200) { $('authErr').textContent = r.body.error || `error ${r.status}`; return; } me = r.body.user; if (r.body.firstAccount) toast('You are the first account, so you are the admin.', 'good'); else toast(`Welcome, ${me.name}`, 'good'); location.hash = '#/home'; };
+  $('bIn').onclick = async () => done(await api('POST', '/auth/login', { email: $('iEmail').value, password: $('iPass').value }));
+  $('bUp').onclick = async () => done(await api('POST', '/auth/register', { name: $('uName').value, email: $('uEmail').value, password: $('uPass').value }));
+  ['iPass', 'uPass'].forEach(id => $(id).onkeydown = (e) => { if (e.key === 'Enter') (id === 'iPass' ? $('bIn') : $('bUp')).click(); });
+};
+
+// ---- home -------------------------------------------------------------------------------------------------------
+routes.home = async () => {
+  $('view').innerHTML = `<h1>Hello, ${esc(me.name)}</h1><p class="dim" style="margin:0">${me.role === 'user' ? 'Rent a film to watch it on your own, or get a ticket to a party that is live.' : me.role === 'host' ? 'You can host parties. Rent a film first, then press Host a party.' : 'You are the admin. Roles are under Admin in the top bar.'}</p>
+    <div class="bar" style="margin-top:14px"><h2 style="margin:0">Live now</h2><span style="flex:1"></span>${me.role !== 'user' ? '<button id="bHost" class="primary">Host a party</button>' : ''}</div>
+    <div id="parties" class="parties"></div>
+    <h2>Films</h2><div id="films" class="grid"></div>`;
+  let films = [];
+  const load = async () => {
+    const [p, f] = await Promise.all([api('GET', '/api/parties'), api('GET', '/api/films')]);
+    films = f.body;
+    $('parties').innerHTML = p.body.length ? p.body.map(x => `<div class="party">
+      <div class="bar" style="margin:0"><span class="badge ${x.live ? 'live' : ''}">${x.live ? 'LIVE' : x.hostOnline ? 'HOST HERE' : 'WAITING'}</span><b>${esc(x.title)}</b></div>
+      <div class="dim" style="font-size:13px">${esc(x.filmTitle)} · hosted by ${esc(x.hostName)} · ${x.viewers} watching</div>
+      <div class="actions">${x.mine ? `<a href="#/party/${x.id}"><button class="primary sm">Open as host</button></a>` : x.hasTicket ? `<a href="#/party/${x.id}"><button class="primary sm">Join</button></a><span class="badge">TICKET HELD</span>` : `<button class="primary sm" data-ticket="${x.id}">Get ticket</button><span class="dim" style="font-size:12px">free, this party only</span>`}</div></div>`).join('')
+      : '<div class="empty">No party is live right now.</div>';
+    $('films').innerHTML = films.length ? films.map(x => `<div class="film">
+      <div class="poster" style="background:linear-gradient(160deg,hsl(${hue(x.id)} 45% 28%),hsl(${(hue(x.id) + 40) % 360} 60% 12%))">${esc(x.title.slice(0, 2).toUpperCase())}</div>
+      <div class="body"><div class="t">${esc(x.title)}</div>
+        <div class="badges"><span class="badge">v${x.version}</span>${x.protections.includes('drm') ? '<span class="badge accent">DRM</span>' : ''}${x.protections.includes('url') ? '<span class="badge">PROTECTED URL</span>' : ''}${x.protections.includes('url') ? '<span class="badge">PARTY READY</span>' : ''}</div>
+        <div class="dim" style="font-size:13px">${x.rented ? `Rented until ${fmt(x.rentalExpires)}` : 'Not rented'}</div>
+        <div class="actions">${x.rented ? `<a href="#/watch/${x.id}"><button class="primary sm">Watch</button></a>` : `<button class="primary sm" data-rent="${x.id}">Rent 48 h</button>`}</div></div></div>`).join('')
+      : '<div class="empty">No films are ready yet.</div>';
+    document.querySelectorAll('[data-ticket]').forEach(b => b.onclick = async () => { const r = await api('POST', `/party/${b.dataset.ticket}/ticket`, {}); if (r.status === 200) { toast('Ticket issued. It opens this party only.', 'good'); load(); } else toast(r.body.error || 'could not get a ticket', 'bad'); });
+    document.querySelectorAll('[data-rent]').forEach(b => b.onclick = async () => { const r = await api('POST', `/api/rent/${b.dataset.rent}`); if (r.status === 200) { toast('Rented for 48 hours. No payment step yet.', 'good'); load(); } else toast(r.body.error || 'could not rent', 'bad'); });
+  };
+  const timer = setInterval(() => { if (location.hash.startsWith('#/home')) load(); }, 10000); cleanup = () => clearInterval(timer);
+  const bh = $('bHost'); if (bh) bh.onclick = async () => {
+    if (!films.length) await load();
+    const ok = films.filter(f => f.protections.includes('url'));
+    $('modalBody').innerHTML = `<h2 style="margin-top:0">Host a party</h2>
+      <label>Film (needs a protected-URL version)</label><select id="hFilm">${ok.map(f => `<option value="${f.id}" ${f.rented ? '' : 'data-norent="1"'}>${esc(f.title)}${f.rented ? '' : ' (rent first)'}</option>`).join('') || '<option value="">no film has a protected-URL version</option>'}</select>
+      <label>Party title</label><input id="hTitle" placeholder="Friday premiere">
+      <div class="ctl"><button id="hGo" class="primary" style="flex:1">Create</button><button id="hNo">Cancel</button></div><p id="hErr" class="no" style="min-height:1.4em;margin:8px 0 0"></p>`;
+    $('modal').style.display = 'flex'; $('hNo').onclick = () => $('modal').style.display = 'none';
+    $('hGo').onclick = async () => {
+      const filmId = $('hFilm').value; if (!filmId) return;
+      if ($('hFilm').selectedOptions[0].dataset.norent) { const r = await api('POST', `/api/rent/${filmId}`); if (r.status !== 200) return $('hErr').textContent = r.body.error; }
+      const r = await api('POST', '/party', { filmId, title: $('hTitle').value.trim() || undefined });
+      if (r.status !== 200) return $('hErr').textContent = r.body.error || `error ${r.status}`;
+      $('modal').style.display = 'none'; location.hash = `#/party/${r.body.partyId}`;
+    };
+  };
+  await load();
+};
+
+// what this device's DRM can do (robustness levels), for the log
+async function drmLevel() {
+  const tryKs = async (ks, robustness) => { try { await navigator.requestMediaKeySystemAccess(ks, [{ initDataTypes: ['cenc', 'skd', 'sinf'], videoCapabilities: [{ contentType: 'video/mp4; codecs="avc1.640028"', ...(robustness ? { robustness } : {}) }] }]); return true; } catch { return false; } };
+  if (await tryKs('com.apple.fps')) return 'DRM: FairPlay (hardware on Apple devices; 4K needs an HDCP display path).';
+  if (!(await tryKs('com.widevine.alpha'))) return 'DRM: none detected.';
+  const hw = await tryKs('com.widevine.alpha', 'HW_SECURE_ALL'), hwDec = await tryKs('com.widevine.alpha', 'HW_SECURE_DECODE');
+  return `DRM: Widevine ${hw ? 'L1 (hardware, HW_SECURE_ALL): 4K allowed if HDCP 2.2 is present' : hwDec ? 'hardware decode but not HW_SECURE_ALL: 4K withheld by policy' : 'L3 (software): 4K withheld by policy'}.`;
+}
+// ---- watch a film -----------------------------------------------------------------------------------------------
+routes.watch = async ([filmId]) => {
+  const f = (await api('GET', '/api/films')).body.find(x => x.id === filmId);
+  if (!f) { toast('film not found', 'bad'); location.hash = '#/home'; return; }
+  $('view').innerHTML = `<div class="bar"><a href="#/home">&larr; Home</a><h1 style="margin:0">${esc(f.title)}</h1></div>
+    <div class="stage"><div class="card">
+      <div class="screen"><video id="v" controls playsinline></video></div>
+      <div class="ctl"><button id="bPlay" class="primary">Play</button><button id="bStop">Stop</button>
+        <select id="mode" style="width:auto"><option value="drm">DRM version</option><option value="url" ${f.protections.includes('url') ? '' : 'disabled'}>Protected URL version${f.protections.includes('url') ? '' : ' (not built)'}</option></select>
+</div>
+      <p id="policy" hidden></p>
+      <div class="row" style="margin-top:10px"><span>status <b id="st">idle</b></span><span>playing <b id="res">-</b></span><span>quality <select id="q" style="width:auto;padding:3px 8px"><option value="auto">auto</option></select></span><span>buffer <b id="buf">-</b></span><span>licenses <b id="lic">0</b></span></div>
+      <details class="log"><summary>Details and log</summary><pre id="log"></pre></details>
+    </div>
+    <div class="card"><h2 style="margin-top:0">About this film</h2>
+      <div class="row" style="flex-direction:column;align-items:flex-start;gap:6px"><span>rental <b>${f.rented ? 'until ' + fmt(f.rentalExpires) : 'none'}</b></span><span>version <b>v${f.version}</b></span><span>protection <b>${f.protections.map(p => p === 'drm' ? 'DRM (Widevine, PlayReady, FairPlay)' : 'protected URL (signed 4 h links)').join(' and ')}</b></span></div>
+      <p class="hint">DRM plays up to 4K on any device that can decode it. The protected-URL version has no DRM, so it is capped at 1080p; it is the version watch parties use.</p>
+    </div></div>`;
+  bindLog($('log'));
+  let player = null, pass = null, lic = 0, timer = null;
+  const mode = () => $('mode').value;
+  async function requestPass() {
+    const r = await api('POST', `/play/${filmId}`, { deviceId, mode: mode() });
+    if (r.status !== 200) { pass = null; $('st').textContent = `refused (${r.status})`; log(`/play -> ${r.status} "${r.body.error}"`); toast(r.body.error || 'refused', 'bad'); return null; }
+    pass = { ...r.body, mode: mode() };
+    log(`/play (${pass.mode}) -> pass for ${pass.expiresInS / 3600} h; policy maxHeight=${pass.policy.maxHeight}: ${pass.policy.reason}`);
+    $('policy').hidden = true;
+    return pass;
+  }
+  async function play() {
+    if (!pass || pass.mode !== mode()) { if (!(await requestPass())) return; }
+    shaka.polyfill.installAll();
+    if (player) await player.destroy();
+    lic = 0; $('lic').textContent = '0';
+    player = new shaka.Player(); await player.attach($('v'));
+    const urlMode = pass.mode === 'url', vd = urlMode ? null : pass.vendorDrm;
+    const drmCfg = urlMode ? {} : vd ? { servers: { 'com.widevine.alpha': vd.widevine, 'com.microsoft.playready': vd.playready, 'com.apple.fps': vd.fairplay }, advanced: { 'com.apple.fps': { serverCertificateUri: vd.fairplayCertificate } } } : { servers: { 'org.w3.clearkey': pass.licenseUrl } };
+    const manifestUrl = urlMode ? (isSafari ? pass.hls : pass.dash) : vd && isSafari ? pass.hls : pass.dash.split('?')[0];
+    log(urlMode ? 'protection: signed URL only, no license requests' : `key system: ${vd ? (isSafari ? 'FairPlay (HLS)' : 'Widevine/PlayReady (DASH)') + ' via ' + vd.vendor : 'ClearKey'}`);
+    // Prefer the key system this browser actually has. Without this, Shaka's polyfills make it probe only PlayReady for
+    // cbcs films on Chrome/Edge (which have no PlayReady) and fail with 6001 before ever trying Widevine (found 2026-09-24).
+    const preferredKeySystems = isSafari ? ['com.apple.fps'] : ['com.widevine.alpha', 'com.microsoft.playready'];
+    // Safari: keep the HLS inside Shaka's MSE engine. Its native HLS player cannot send the pass or use our FairPlay setup and
+    // ends in 6010 ("0 tracks, drm none"). Same setting as the console, which the user signed off in Safari on 2026-09-21.
+    player.configure({ drm: { ...drmCfg, preferredKeySystems }, restrictions: { maxHeight: pass.policy.maxHeight }, streaming: { useNativeHlsForFairPlay: false } });
+    const net = player.getNetworkingEngine(), T = shaka.net.NetworkingEngine.RequestType;
+    net.registerRequestFilter((type, req) => { if (type === T.MANIFEST || type === T.LICENSE) req.headers['Authorization'] = 'Bearer ' + pass.token; if (type === T.LICENSE) { lic++; $('lic').textContent = lic; } });
+    net.registerResponseFilter((type, resp) => { if (type === T.LICENSE) log(`license response ${resp.data.byteLength} bytes (opaque, key stays in the DRM module)`); });
+    const v = $('v');
+    v.addEventListener('playing', () => $('st').textContent = 'playing'); v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; });
+    player.addEventListener('error', (e) => { log(`shaka error ${e.detail.code} ${e.detail.message || ''} data=${JSON.stringify(e.detail.data).slice(0, 300)}`); $('st').textContent = 'error'; toast(`Playback error ${e.detail.code}`, 'bad'); });
+    player.addEventListener('keystatuschanged', () => log(`key statuses: ${JSON.stringify(player.getKeyStatuses())}`));
+    const showActive = () => { const t = player.getVariantTracks().find(t => t.active); if (t) $('res').textContent = `${t.width}x${t.height} @ ${(t.bandwidth / 1e6).toFixed(1)} Mbps`; };
+    let lockedNote = null, lockedChecked = false;   // set when a rung exists in the manifest but was not unlocked
+    async function checkLocked() {
+      if (!player || lockedChecked) return;
+      const variants = player.getManifest()?.variants || [], inManifest = Math.max(0, ...variants.map(x => x.video?.height || 0)), offered = Math.max(0, ...player.getVariantTracks().map(t => t.height || 0));
+      if (!inManifest || inManifest <= offered) return;
+      lockedChecked = true;
+      const top = variants.find(x => x.video?.height === inManifest), ks = player.getKeyStatuses();
+      const kid = top?.video?.keyIds ? [...top.video.keyIds][0] : null; const keyStatus = kid ? (ks[kid] || 'not delivered') : 'unknown';
+      let decode = 'unknown'; try { const r = await navigator.mediaCapabilities.decodingInfo({ type: 'media-source', video: { contentType: `video/mp4; codecs="${top.video.codecs}"`, width: top.video.width, height: top.video.height, bitrate: top.bandwidth, framerate: top.video.frameRate || 24 } }); decode = r.supported ? 'supported' : 'NOT supported'; } catch {}
+      const level = await drmLevel();
+      log(`${inManifest}p is in the manifest but not offered (top offered ${offered}p). 2160p key: ${keyStatus}. Decoder for ${top.video.codecs} at ${top.video.width}x${top.video.height}: ${decode}. ${level}`);
+      lockedNote = `${inManifest}p locked: ${decode === 'NOT supported' ? 'this device cannot decode it' : keyStatus === 'not delivered' ? 'key not delivered (DRM level or HDCP)' : keyStatus === 'output-restricted' ? 'output restricted (HDCP)' : 'key ' + keyStatus}`;
+      fillPicker(); toast(lockedNote, 'bad');
+    }
+    const fillPicker = () => { const sel = $('q'), cur = sel.value; sel.innerHTML = '<option value="auto">auto</option>'; const seen = new Set(); player.getVariantTracks().sort((a, b) => b.height - a.height).forEach(t => { if (seen.has(t.height)) return; seen.add(t.height); const o = document.createElement('option'); o.value = t.height; o.textContent = `${t.height}p`; sel.appendChild(o); });
+      if (lockedNote) { const o = document.createElement('option'); o.disabled = true; o.textContent = lockedNote; sel.insertBefore(o, sel.options[1] || null); }
+      sel.value = [...sel.options].some(o => o.value === cur) ? cur : 'auto'; };
+    player.addEventListener('adaptation', showActive); player.addEventListener('variantchanged', showActive); player.addEventListener('trackschanged', fillPicker);
+    // Manual quality switch: keep one segment (6 s, the packager's --segment_duration) ahead of the playhead and replace the rest. A full flush
+    // (the old second argument alone) froze the picture ~2.7 s on every switch; 6 s showed no freeze with the new rung visible in ~4 s (measured 2026-10-01).
+    const SWITCH_MARGIN_S = 6;
+    $('q').onchange = () => { const h = $('q').value; if (h === 'auto') { player.configure({ abr: { enabled: true } }); return; } const t = player.getVariantTracks().find(t => String(t.height) === h); if (t) { player.configure({ abr: { enabled: false } }); player.selectVariantTrack(t, true, SWITCH_MARGIN_S); } };
+    clearInterval(timer); timer = setInterval(() => { if (!player) return; const b = player.getBufferedInfo().total, s = player.getStats(); $('buf').textContent = b.length ? `${Math.max(0, b[b.length - 1].end - v.currentTime).toFixed(1)} s, dropped ${s.droppedFrames}/${s.decodedFrames}` : '-'; }, 1000);
+    try {
+      $('st').textContent = 'loading'; await player.load(manifestUrl); fillPicker(); showActive();
+      log(`loaded: ${player.getVariantTracks().length} tracks, ${v.duration.toFixed(1)} s, drm ${player.drmInfo()?.keySystem || 'none'}`);
+      // Say plainly when the manifest has a rung the licence did not unlock (the 2160p key needs hardware DRM + HDCP).
+      // The verdict arrives with the key statuses, a moment after load, so re-check on those events too.
+      checkLocked(); player.addEventListener('keystatuschanged', checkLocked); player.addEventListener('trackschanged', checkLocked);
+      v.play();
+    }
+    catch (e) { log(`load failed: ${e.code} ${e.message || ''} data=${JSON.stringify(e.data).slice(0, 300)} videoError=${$('v').error ? $('v').error.code + ' ' + $('v').error.message : 'none'}`); $('st').textContent = 'error'; toast(`Could not load (${e.code})`, 'bad'); }
+  }
+  $('bPlay').onclick = play; $('bStop').onclick = async () => { if (player) { await player.destroy(); player = null; } $('st').textContent = 'stopped'; };
+  $('mode').onchange = () => { pass = null; };
+  cleanup = async () => { clearInterval(timer); if (player) await player.destroy(); };
+};
+
+// ---- admin ------------------------------------------------------------------------------------------------------
+routes.admin = async () => {
+  if (me.role !== 'admin') { location.hash = '#/home'; return; }
+  $('view').innerHTML = `<h1>Users</h1><p class="dim" style="margin:0 0 12px">Change a role and it applies at once. Hosts can create parties; admins see this page.</p>
+    <div class="card"><input id="q" placeholder="Search by name or email" style="max-width:360px"><div style="overflow:auto;margin-top:12px"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Last sign in</th></tr></thead><tbody id="rows"></tbody></table></div></div>`;
+  const load = async () => {
+    const r = await api('GET', `/api/admin/users?q=${encodeURIComponent($('q').value.trim())}`);
+    $('rows').innerHTML = r.body.map(u => `<tr><td><b>${esc(u.name)}</b>${u.id === me.id ? ' <span class="dim">(you)</span>' : ''}</td><td>${esc(u.email)}</td>
+      <td><select data-id="${u.id}"><option ${u.role === 'user' ? 'selected' : ''}>user</option><option ${u.role === 'host' ? 'selected' : ''}>host</option><option ${u.role === 'admin' ? 'selected' : ''}>admin</option></select></td><td class="dim">${fmt(u.createdAt)}</td><td class="dim">${fmt(u.lastLoginAt)}</td></tr>`).join('');
+    document.querySelectorAll('#rows select').forEach(s => s.onchange = async () => { const r = await api('PUT', `/api/admin/users/${s.dataset.id}/role`, { role: s.value }); if (r.status === 200) toast(`Role set to ${s.value}`, 'good'); else { toast(r.body.error || 'refused', 'bad'); load(); } });
+  };
+  $('q').oninput = load; await load();
+};
+
+// ---- watch party ------------------------------------------------------------------------------------------------
+routes.party = async ([partyId]) => {
+  const info = await api('GET', `/party/${partyId}`);
+  if (info.status !== 200) { toast(info.body.error || 'party not found', 'bad'); location.hash = '#/home'; return; }
+  if (info.body.status === 'ended') { toast('This party has ended.', 'bad'); location.hash = '#/home'; return; }
+  const j = await api('POST', `/party/${partyId}/join`, { deviceId });
+  if (j.status === 402) {
+    $('view').innerHTML = `<div class="auth card"><h2 style="margin-top:0">${esc(info.body.title)}</h2><p>${esc(info.body.filmTitle)}, hosted by ${esc(info.body.hostName)}.</p><p>You need a ticket to join this party. A ticket opens this party only, while it runs. It is not a rental of the film.</p><div class="ctl"><button id="bTicketJoin" class="primary" style="flex:1">Get a ticket and join</button><a href="#/home"><button>Back</button></a></div><p class="hint">Free for now: there is no payment step yet.</p></div>`;
+    $('bTicketJoin').onclick = async () => { const r = await api('POST', `/party/${partyId}/ticket`, {}); if (r.status === 200) route(); else toast(r.body.error || 'could not get a ticket', 'bad'); };
+    return;
+  }
+  if (j.status !== 200) { toast(j.body.error || `could not join (${j.status})`, 'bad'); location.hash = '#/home'; return; }
+  const P_ = j.body; const isHost = P_.role === 'host';
+  $('view').innerHTML = `<div class="bar"><a href="#/home">&larr; Home</a><span class="badge" id="bLive">OFFLINE</span><h1 style="margin:0;font-size:20px">${esc(P_.title)}</h1><span class="dim">${esc(P_.filmTitle)}</span><span style="flex:1"></span><span><b id="viewers">0</b> <span class="dim">watching</span></span><span class="dim" id="sync"></span></div>
+    <div class="stage"><div>
+      <div class="card">
+        <div class="screen"><video id="v" playsinline ${isHost ? 'controls' : ''}></video><video id="cam" autoplay playsinline muted></video><span id="micPill"><i></i> host mic on</span><audio id="hostAudio" autoplay></audio><div id="gate"><button id="bGate" class="primary">Tap to watch with sound</button></div></div>
+        ${isHost ? `<div class="ctl"><button id="bCam">Camera</button><button id="bMic">Mic only</button><span style="flex:1"></span><button id="bEnd" class="danger">End party</button></div>` : ''}
+        <div class="row" style="margin-top:10px"><span>player <b id="st">idle</b></span><span>quality <b id="res">-</b></span><span>clock <b id="clk">-</b></span><span>host feed <b id="rtc">-</b></span><span>host bitrate <b id="kbps">-</b></span></div>
+        <details class="log"><summary>Details and log</summary>
+          ${isHost ? `<div class="checks"><div><span>Join without a ticket should be refused</span><span id="c1">-</span></div><div><span>Viewer cannot move the clock</span><span id="c2">-</span></div><div><span>Viewer cannot publish camera / mic</span><span id="c3">-</span></div><div><span>Party ticket does not open another film</span><span id="c4">-</span></div><div><span>Chat rate limit holds</span><span id="c5">-</span></div><div><span>Kicked viewer cannot rejoin</span><span id="c6">-</span></div></div><div class="ctl"><button id="bChecks" class="sm">Run security checks</button></div><p class="hint">Checks need TEST_MODE on the server (a throwaway viewer rents, joins and misbehaves).</p>` : ''}
+          <pre id="log"></pre></details>
+      </div></div>
+      <div class="card chat"><h2 style="margin-top:0">Chat</h2><div id="pinned"></div><div id="msgs"></div>
+        <div class="compose"><input id="text" placeholder="Say something…" maxlength="500"><button id="bSend" class="primary">Send</button></div>
+        ${isHost ? `<div class="hostbar"><span>slow mode</span><select id="slow"><option value="0">off</option><option value="5">5 s</option><option value="15">15 s</option><option value="60">60 s</option></select><button id="bUnpin" class="sm">Unpin</button></div>` : ''}
+        <div class="hint" id="chatHint">${isHost ? 'Hover a message to pin, mute or remove.' : 'One message every 1.5 s (more in slow mode).'}</div></div></div>`;
+  bindLog($('log'));
+  cleanup = await runParty(P_, isHost);
+};
+
+// The party runtime. Same protocol as before: WebSocket room (chat, clock, pins), Realtime SFU for the host's tracks
+// with one PeerConnection per publish group and simulcast a/b/c, viewers follow the host's clock.
+async function runParty(me_, isHost) {
+  const P = (path) => `/party/${me_.partyId}${path}`;
+  const auth = () => ({ Authorization: 'Bearer ' + me_.token });
+  let ws = null, player = null, clock = null, offset = 0, userStarted = isHost, hostTracks = null, wsRetry = 0, closed = false;
+  const timers = [];
+  log(`joined "${me_.title}" as ${me_.role} (${me_.you.name}). Realtime SFU ${me_.realtime ? 'on' : 'OFF'}. ${me_.policy.sync}.`);
+
+  // film
+  shaka.polyfill.installAll();
+  player = new shaka.Player(); await player.attach($('v'));
+  player.configure({ restrictions: { maxHeight: me_.policy.maxHeight }, streaming: { bufferingGoal: 20, rebufferingGoal: 2, useNativeHlsForFairPlay: false } });
+  player.addEventListener('error', (e) => { log(`shaka error ${e.detail.code} ${e.detail.message || ''}`); $('st').textContent = 'error'; });
+  const showActive = () => { const t = player?.getVariantTracks().find(t => t.active); if (t) $('res').textContent = `${t.height}p ${(t.bandwidth / 1e6).toFixed(1)} Mbps`; };
+  player.addEventListener('adaptation', showActive); player.addEventListener('variantchanged', showActive);
+  const v = $('v');
+  v.addEventListener('playing', () => $('st').textContent = 'playing'); v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; }); v.addEventListener('waiting', () => $('st').textContent = 'buffering');
+  try { $('st').textContent = 'loading'; await player.load(isSafari ? me_.hls : me_.dash); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, protected-URL, no license requests`); } catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
+  if (!isHost) $('gate').style.display = 'flex';
+  $('bGate').onclick = () => { userStarted = true; $('gate').style.display = 'none'; v.muted = false; v.play().catch(() => {}); $('cam').play().catch(() => {}); $('hostAudio').play().catch(() => {}); };
+
+  // clock
+  const wsSend = (m) => { if (ws?.readyState === 1) ws.send(JSON.stringify(m)); };
+  // Sync, reworked 2026-10-01 after a real test showed viewers 1-2 s behind the host:
+  //  - the host stamps the clock in room time (its own offset), so the uplink latency no longer shifts every viewer;
+  //  - the host reports every second and on 'playing' / 'waiting' too (a frozen host picture counts as paused), not
+  //    on 'play' alone, which fires before the picture moves;
+  //  - viewers apply a clock the moment it arrives, tick 4 times a second, always land on the host's exact frame when
+  //    paused, correct proportionally up to 10% speed above one frame (0.04 s) of error, and seek above 1 s.
+  let hostRttMs = 0;   // the host's round trip to the SFU, sent with every clock
+  const hostState = () => (v.paused || v.ended || v.readyState < 3) ? 'paused' : 'playing';
+  const sendClock = () => { const state = hostState(); wsSend({ t: 'clock', state, position: v.currentTime, rate: v.playbackRate, at: Date.now() + offset, rtt: hostRttMs }); $('clk').textContent = `${state} @ ${v.currentTime.toFixed(1)} s (you)`; };
+  if (isHost) { ['play', 'playing', 'pause', 'seeked', 'waiting', 'ratechange', 'ended'].forEach(ev => v.addEventListener(ev, sendClock)); timers.push(setInterval(() => { if (!v.paused) sendClock(); }, 1000)); }
+  // Voice alignment (2026-10-01): the host's voice reaches a viewer through the SFU some 0.3-0.5 s after the clock does, so a
+  // viewer replays the host's timeline delayed by that much: the frame the host talks about appears as the words arrive.
+  // The delay is host half round trip + viewer half round trip + the viewer's audio jitter buffer + 80 ms for codecs and the
+  // SFU, measured from WebRTC stats every 2 s and smoothed; it is 0 when no host audio is being received.
+  let voiceMs = 0, clockQ = [];
+  const vnow = () => Date.now() + offset - voiceMs;
+  // A clock is held for the voice delay minus the time it already spent in transit, measured from its local arrival, so a
+  // wrong offset estimate can delay it by at most the voice delay and never hold it back indefinitely.
+  const takeClock = (c) => { if (isHost) { clock = c; return; } const transit = (Date.now() + offset) - c.at; c.applyAt = Date.now() + Math.max(0, Math.min(voiceMs, voiceMs - transit)); clockQ.push(c); clockQ.sort((a, b) => a.applyAt - b.applyAt); pickClock(); syncTick(); };
+  const pickClock = () => { const t = Date.now(); let i = -1; for (let k = 0; k < clockQ.length; k++) if (clockQ[k].applyAt <= t) i = k; if (i >= 0) { clock = clockQ[i]; clockQ.splice(0, i); } };
+  const expected = () => { if (!isHost) pickClock(); return !clock ? null : clock.state === 'playing' ? clock.position + (vnow() - clock.at) / 1000 * clock.rate : clock.position; };
+  let seekedFor = 0, lastSeekAt = 0;   // seekedFor: clock.at of the paused clock we last seeked to; lastSeekAt: no re-seek while the buffer refills
+  const syncTick = () => {
+    if (!clock || !player || isNaN(v.duration)) return;
+    const exp = Math.min(expected(), v.duration), d = v.currentTime - exp;
+    $('clk').textContent = `${clock.state} @ ${exp.toFixed(1)} s${voiceMs ? `, voice +${(voiceMs / 1000).toFixed(2)} s` : ''}`; $('sync').textContent = `sync ${d >= 0 ? '+' : ''}${d.toFixed(2)} s`;
+    if (clock.state === 'paused') { if (!v.paused) v.pause(); v.playbackRate = 1; if (Math.abs(d) > 0.05 && seekedFor !== clock.at) { seekedFor = clock.at; v.currentTime = exp; } return; }
+    if (!userStarted) { if (Math.abs(d) > 1) v.currentTime = exp; return; }
+    if (v.paused) v.play().catch(() => {});
+    if (Math.abs(d) > 1 && Date.now() - lastSeekAt > 2500) { lastSeekAt = Date.now(); v.currentTime = exp + 0.3; v.playbackRate = 1; log(`resync: was ${d.toFixed(2)} s off, seeked`); }
+    else if (Math.abs(d) > 0.04) v.playbackRate = Math.min(1.1, Math.max(0.9, 1 - d)); else v.playbackRate = 1;   // 0.04 s = one frame at 24 fps
+  };
+  if (!isHost) timers.push(setInterval(syncTick, 250));
+
+  // room
+  const connectWs = () => {
+    if (closed) return;
+    ws = new WebSocket(me_.ws);
+    ws.onopen = () => { wsRetry = 0; log('room connected'); pingTime(); };
+    ws.onmessage = (e) => { if (e.data === 'pong') return; let m; try { m = JSON.parse(e.data); } catch { return; } onRoom(m); };
+    ws.onclose = (e) => { log(`room closed ${e.code} ${e.reason || ''}`); if (closed) return; if (e.code === 4001) { toast('You were removed from this party.', 'bad'); location.hash = '#/home'; } else if (e.code === 4000) { setLive(null, false); $('bLive').textContent = 'ENDED'; } else if (wsRetry < 8) setTimeout(connectWs, Math.min(8000, 500 * 2 ** wsRetry++)); };
+  };
+  timers.push(setInterval(() => { if (ws?.readyState === 1) ws.send('ping'); }, 25000));
+  // Room-time offset: three pings per batch, keep the lowest-latency sample, and repeat every 30 s (a phone that changes
+  // network, or a clock that drifts, used to keep the offset measured once at connect).
+  const pingTime = () => { for (let i = 0; i < 3; i++) setTimeout(() => wsSend({ t: 'time', c: Date.now() }), i * 300); };
+  let bestTime = null;
+  timers.push(setInterval(() => { if (ws?.readyState === 1) pingTime(); }, 30000));
+  const onRoom = (m) => {
+    switch (m.t) {
+      case 'hello': takeClock(m.clock); setPinned(m.pinned); $('viewers').textContent = m.viewers; if ($('slow')) $('slow').value = m.slowModeS; (m.recent || []).forEach(addMsg); setLive(m.hostTracks, m.hostOnline); if (m.hostTracks) pullTracks(m.hostTracks); if (m.muted) $('chatHint').textContent = 'You are muted by the host.'; break;
+      case 'time': { const now = Date.now(); const rtt = now - m.c, off = m.s - (m.c + rtt / 2); if (!bestTime || rtt <= bestTime.rtt || now - bestTime.at > 60000) { bestTime = { rtt, at: now }; offset = off; } break; }
+      case 'chat': addMsg(m.msg); break;
+      case 'system': addSys(m.text); break;
+      case 'pin': setPinned(m.pinned); break;
+      case 'clock': takeClock(m.clock); break;
+      case 'roster': $('viewers').textContent = m.viewers; setLive(hostTracks, m.hostOnline); break;
+      case 'tracks': setLive(m.hostTracks, true); if (m.hostTracks) pullTracks(m.hostTracks); else if (!isHost) clearRemote(); break;
+      case 'slow': if ($('slow')) $('slow').value = m.slowModeS; if (!isHost) $('chatHint').textContent = m.slowModeS ? `Slow mode: one message every ${m.slowModeS} s.` : 'One message every 1.5 s.'; break;
+      case 'muted': $('chatHint').textContent = m.muted ? 'You are muted by the host.' : 'You can chat again.'; break;
+      case 'ended': $('bLive').textContent = 'ENDED'; $('bLive').className = 'badge'; addSys('The host ended the party.'); toast('The party has ended.'); break;
+      case 'error': log(`room refused: ${m.code} ${m.detail || ''}`); if (m.code === 'rate' || m.code === 'muted') $('chatHint').textContent = m.detail; break;
+    }
+  };
+  const setLive = (ht, hostOnline) => { hostTracks = ht; const live = !!ht; $('bLive').textContent = live ? 'LIVE' : hostOnline ? 'HOST HERE' : 'OFFLINE'; $('bLive').className = 'badge' + (live ? ' live' : ''); $('rtc').textContent = live ? [...new Set(ht.tracks.map(t => labelOf(t.trackName)))].join(', ') : '-'; };
+
+  // chat
+  const addMsg = (msg) => {
+    const d = document.createElement('div'); d.className = 'm'; d.dataset.seq = msg.seq;
+    d.innerHTML = `<span class="who ${msg.role === 'host' ? 'host' : ''}">${esc(msg.name || msg.userId)}</span><span class="txt">${esc(msg.text)}</span>` +
+      (isHost ? `<span class="act"><button data-a="pin">pin</button>${msg.role !== 'host' ? `<button data-a="mute">mute</button><button data-a="kick">remove</button>` : ''}</span>` : '');
+    d.querySelectorAll('button').forEach(b => b.onclick = () => { const a = b.dataset.a; if (a === 'pin') wsSend({ t: 'pin', seq: msg.seq, msg }); else if (a === 'kick' && confirm(`Remove ${msg.name || msg.userId} from the party?`)) wsSend({ t: 'kick', userId: msg.userId }); else if (a === 'mute') wsSend({ t: 'mute', userId: msg.userId }); });
+    const box = $('msgs'); const stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 40; box.appendChild(d); while (box.children.length > 300) box.removeChild(box.firstChild); if (stick) box.scrollTop = box.scrollHeight;
+  };
+  const addSys = (text) => { const d = document.createElement('div'); d.className = 'm sys'; d.textContent = text; $('msgs').appendChild(d); $('msgs').scrollTop = $('msgs').scrollHeight; };
+  const setPinned = (p) => { $('pinned').style.display = p ? 'block' : 'none'; if (p) $('pinned').innerHTML = `📌 <b>${esc(p.name || p.userId)}</b>: ${esc(p.text)}`; };
+  $('bSend').onclick = () => { const t = $('text').value.trim(); if (!t) return; wsSend({ t: 'chat', text: t }); $('text').value = ''; };
+  $('text').onkeydown = (e) => { if (e.key === 'Enter') $('bSend').onclick(); };
+  if (isHost) { $('slow').onchange = () => wsSend({ t: 'slow', seconds: Number($('slow').value) }); $('bUnpin').onclick = () => wsSend({ t: 'unpin' });
+    $('bEnd').onclick = async () => { if (!confirm('End the party for everyone?')) return; const r = await api('POST', P('/end'), {}, auth()); log(`end -> ${r.status}`); if (r.status === 200) { toast('Party ended.'); setTimeout(() => location.hash = '#/home', 800); } }; }
+
+  // ---- WebRTC via Realtime SFU: one PeerConnection (= one SFU session) per publish group, simulcast a/b/c -------
+  let gen = 0, camStream = null, micStream = null;
+  const hostGroups = new Map();
+  const labelOf = (trackName) => String(trackName).replace(/-\d+$/, '');
+  const viewerConns = new Map();
+  const allPcs = () => [...hostGroups.values()].map(g => g.pc).concat([...viewerConns.values()].map(c => c.pc));
+  async function newConn() {
+    const r = await api('POST', P('/rtc/session'), {}, auth());
+    if (r.status !== 200) throw new Error(`${r.status} ${r.body.error || ''}`);
+    const pc = new RTCPeerConnection({ iceServers: r.body.iceServers, bundlePolicy: 'max-bundle' });
+    pc.onconnectionstatechange = () => log(`webrtc ${r.body.sessionId.slice(0, 8)}… ${pc.connectionState}`);
+    return { pc, sessionId: r.body.sessionId };
+  }
+  const liveList = () => [...hostGroups.values()].flatMap(g => g.items.map(it => ({ sessionId: g.sessionId, trackName: it.trackName, kind: it.kind })));
+  const layers = () => [{ rid: 'a', maxBitrate: 1_200_000 }, { rid: 'b', scaleResolutionDownBy: 2, maxBitrate: 400_000 }, { rid: 'c', scaleResolutionDownBy: 4, maxBitrate: 150_000 }];
+  async function publishGroup(group, tracks) {
+    if (hostGroups.has(group)) await unpublishGroup(group);
+    const conn = await newConn(); const g = ++gen;
+    const items = tracks.map(({ track, label }) => ({ label, trackName: `${label}-${g}`, kind: track.kind, transceiver: conn.pc.addTransceiver(track, track.kind === 'video' ? { direction: 'sendonly', sendEncodings: layers(label) } : { direction: 'sendonly' }) }));
+    for (const it of items) if (it.kind === 'audio') { const p = it.transceiver.sender.getParameters(); p.encodings = [{ maxBitrate: 64_000 }]; try { await it.transceiver.sender.setParameters(p); } catch {} }
+    const offer = await conn.pc.createOffer(); await conn.pc.setLocalDescription(offer);
+    const entry = { pc: conn.pc, sessionId: conn.sessionId, items: items.map(it => ({ label: it.label, trackName: it.trackName, kind: it.kind, mid: it.transceiver.mid })) };
+    const body = { sessionId: conn.sessionId, offer: { type: 'offer', sdp: conn.pc.localDescription.sdp }, tracks: entry.items.map(it => ({ mid: it.mid, trackName: it.trackName, kind: it.kind })), allTracks: [...liveList(), ...entry.items.map(it => ({ sessionId: conn.sessionId, trackName: it.trackName, kind: it.kind }))] };
+    const r = await api('POST', P('/rtc/publish'), body, auth());
+    if (r.status !== 200) { conn.pc.close(); throw new Error(`publish ${r.status} ${r.body.error || ''}`); }
+    await conn.pc.setRemoteDescription(r.body.sessionDescription);
+    hostGroups.set(group, entry);
+    log(`published ${items.map(i => i.label).join(', ')} on session ${conn.sessionId.slice(0, 8)}… (simulcast ${/a=simulcast:send/.test(conn.pc.localDescription.sdp) ? 'a/b/c' : 'OFF'})${r.body.failed?.length ? ' FAILED: ' + JSON.stringify(r.body.failed) : ''}`);
+  }
+  async function unpublishGroup(group) {
+    const g = hostGroups.get(group); if (!g) return;
+    hostGroups.delete(group);
+    try { g.pc.getSenders().forEach(s => s.track?.stop()); } catch {}
+    const r = await api('PUT', P('/rtc/close'), { sessionId: g.sessionId, tracks: g.items.map(it => ({ mid: it.mid })), force: true, allTracks: liveList() }, auth());
+    try { g.pc.close(); } catch {}
+    log(`stopped ${g.items.map(i => i.label).join(', ')} -> ${r.status}`);
+  }
+  if (isHost) {
+    // Camera = video + audio in one group. Mic only = audio in its own group. Turning the camera off while the mic was
+    // on falls back to mic only, so the host never goes silent by accident.
+    const showSelf = () => { const camOn = hostGroups.has('cam'), micOn = hostGroups.has('mic'); $('cam').style.display = camOn ? 'block' : 'none'; $('micPill').style.display = !camOn && micOn ? 'flex' : 'none'; $('bCam').classList.toggle('on', camOn); $('bMic').classList.toggle('on', micOn || (camOn && camStream?.getAudioTracks()[0]?.enabled)); $('bMic').textContent = camOn ? (camStream?.getAudioTracks()[0]?.enabled ? 'Mute mic' : 'Unmute mic') : (micOn ? 'Mic off' : 'Mic only'); };
+    const startMicOnly = async () => { micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); await publishGroup('mic', [{ track: micStream.getAudioTracks()[0], label: 'mic' }]); };
+    const stopMicOnly = async () => { await unpublishGroup('mic'); micStream?.getTracks().forEach(t => t.stop()); micStream = null; };
+    $('bCam').onclick = async () => {
+      try {
+        if (hostGroups.has('cam')) {
+          const keepMic = camStream?.getAudioTracks()[0]?.enabled;
+          await unpublishGroup('cam'); camStream?.getTracks().forEach(t => t.stop()); camStream = null;
+          if (keepMic) await startMicOnly();
+          showSelf(); return;
+        }
+        if (hostGroups.has('mic')) await stopMicOnly();
+        camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720, frameRate: 24 }, audio: { echoCancellation: true, noiseSuppression: true } });
+        $('cam').srcObject = camStream; $('cam').muted = true;
+        await publishGroup('cam', [{ track: camStream.getVideoTracks()[0], label: 'cam' }, { track: camStream.getAudioTracks()[0], label: 'mic' }]);
+        showSelf();
+      } catch (e) { log(`camera: ${e.message}`); toast(`Camera: ${e.message}`, 'bad'); showSelf(); }
+    };
+    $('bMic').onclick = async () => {
+      try {
+        if (hostGroups.has('cam')) { const t = camStream.getAudioTracks()[0]; t.enabled = !t.enabled; log(`mic ${t.enabled ? 'on' : 'muted'}`); showSelf(); return; }
+        if (hostGroups.has('mic')) await stopMicOnly(); else await startMicOnly();
+        showSelf();
+      } catch (e) { log(`mic: ${e.message}`); toast(`Mic: ${e.message}`, 'bad'); showSelf(); }
+    };
+  }
+  // viewer side
+  const camOut = new MediaStream(), shown = new Map(), layerState = new Map(), RIDS = ['a', 'b', 'c'];
+  async function pullTracks(ht) {
+    if (isHost || !me_.realtime || !ht) return;
+    const wantedSessions = new Set(ht.tracks.map(t => t.sessionId));
+    for (const hs of [...viewerConns.keys()]) if (!wantedSessions.has(hs)) dropConn(hs);
+    for (const hs of wantedSessions) {
+      const names = ht.tracks.filter(t => t.sessionId === hs);
+      let c = viewerConns.get(hs);
+      try {
+        if (!c) { const conn = await newConn(); c = { pc: conn.pc, sessionId: conn.sessionId, midName: new Map(), pulled: new Set(), attempts: 0 }; conn.pc.ontrack = (e) => attachRemote(labelOf(c.midName.get(e.transceiver.mid) || e.track.kind), e.track); viewerConns.set(hs, c); }
+        const want = names.filter(t => !c.pulled.has(t.trackName));
+        if (!want.length) { reconcile(); continue; }
+        const r = await api('POST', P('/rtc/pull'), { sessionId: c.sessionId, tracks: want.map(t => ({ sessionId: hs, trackName: t.trackName })) }, auth());
+        if (r.status !== 200) { log(`pull ${r.status} ${r.body.error || ''}`); continue; }
+        const failed = [];
+        (r.body.tracks || []).forEach(t => { if (t.errorCode || t.error) failed.push(t); else if (t.mid) { c.midName.set(t.mid, t.trackName); c.pulled.add(t.trackName); const k = names.find(n => n.trackName === t.trackName); if (k?.kind === 'video') layerState.set(`${hs}/${t.trackName}`, { hs, trackName: t.trackName, mid: t.mid, conn: c, rid: 'a', cleanSince: performance.now(), lastLost: 0, lastRecv: 0 }); } });
+        if (r.body.requiresImmediateRenegotiation) {
+          await c.pc.setRemoteDescription(r.body.sessionDescription);
+          const ans = await c.pc.createAnswer(); await c.pc.setLocalDescription(ans);
+          const rr = await api('PUT', P('/rtc/renegotiate'), { sessionId: c.sessionId, answer: { type: 'answer', sdp: c.pc.localDescription.sdp } }, auth());
+          if (rr.status !== 200) log(`renegotiate ${rr.status}`);
+        }
+        const ok = want.filter(t => !failed.some(f => f.trackName === t.trackName));
+        if (ok.length) log(`pulling ${ok.map(t => labelOf(t.trackName)).join(', ')} from host session ${hs.slice(0, 8)}…`);
+        if (failed.length && c.attempts < 8) { const wait = 800 + 700 * c.attempts++; log(`pull: ${failed.map(f => labelOf(f.trackName)).join(', ')} not flowing yet; retry in ${wait} ms`); setTimeout(() => pullTracks(hostTracks), wait); }
+        reconcile();
+      } catch (e) { log(`pull failed: ${e.message}`); }
+    }
+  }
+  // cam video -> #cam tile (muted; audio never plays there). mic -> #hostAudio. Screen share was removed on 2026-09-25.
+  const tileOf = (label) => label === 'cam' ? { out: camOut, el: $('cam') } : { out: micOut, el: $('hostAudio') };
+  const micOut = new MediaStream();
+  const refreshTiles = () => { const camVid = camOut.getVideoTracks().some(t => t.readyState === 'live'), mic = micOut.getAudioTracks().some(t => t.readyState === 'live'); $('cam').style.display = camVid ? 'block' : 'none'; $('micPill').style.display = !camVid && mic ? 'flex' : 'none'; };
+  function attachRemote(label, track) {
+    if (shown.get(label) === track && track.readyState === 'live') return;
+    shown.set(label, track); const { out, el } = tileOf(label);
+    out.getTracks().filter(t => t.kind === track.kind).forEach(t => out.removeTrack(t)); out.addTrack(track);
+    el.srcObject = out; el.style.opacity = 1; if (el.tagName === 'AUDIO') el.muted = false; el.play().catch(() => {});
+    track.onended = () => { if (shown.get(label) === track) hideTile(label); };
+    refreshTiles(); log(`receiving ${label} (${track.kind})`);
+  }
+  function hideTile(label) { const { out } = tileOf(label); const t = shown.get(label); if (t) { out.removeTrack(t); shown.delete(label); } refreshTiles(); }
+  function reconcile() { for (const c of viewerConns.values()) for (const tr of c.pc.getTransceivers()) { const name = c.midName.get(tr.mid); if (!name || !tr.receiver?.track) continue; if (tr.currentDirection && !tr.currentDirection.includes('recv')) continue; attachRemote(labelOf(name), tr.receiver.track); } }
+  function dropConn(hs) { const c = viewerConns.get(hs); if (!c) return; viewerConns.delete(hs); for (const k of [...layerState.keys()]) if (k.startsWith(hs + '/')) layerState.delete(k); for (const name of c.midName.values()) hideTile(labelOf(name)); try { c.pc.close(); } catch {} log(`host session ${hs.slice(0, 8)}… gone`); }
+  function clearRemote() { for (const hs of [...viewerConns.keys()]) dropConn(hs); }
+  async function setLayer(st, rid, why) { if (rid === st.rid) return; const r = await api('PUT', P('/rtc/layer'), { sessionId: st.conn.sessionId, mid: st.mid, hostSessionId: st.hs, trackName: st.trackName, rid }, auth()); if (r.status === 200) { st.rid = rid; st.cleanSince = performance.now(); log(`host ${labelOf(st.trackName)} layer -> ${rid} (${why})`); } }
+  window.forceLayer = (rid) => { for (const st of layerState.values()) setLayer(st, rid, 'manual'); };
+  const rttOf = (stats) => { let rtt = 0; stats.forEach(r => { if (r.type === 'candidate-pair' && r.state === 'succeeded' && r.currentRoundTripTime != null) rtt = r.currentRoundTripTime * 1000; }); return rtt; };
+  let jb = { delay: 0, count: 0 }, voiceLogN = 0, lastRtt = { host: 0, mine: 0 };
+  timers.push(setInterval(async () => {
+    if (isHost) { let rtt = 0; for (const g of hostGroups.values()) if (g.pc.connectionState === 'connected') rtt = rtt || rttOf(await g.pc.getStats()); if (rtt) hostRttMs = Math.round(rtt); else if (!hostGroups.size) hostRttMs = 0; return; }   // a stats sample without a round trip keeps the last one
+    let target = 0;
+    for (const c of viewerConns.values()) {
+      if (c.pc.connectionState !== 'connected') continue;
+      const stats = await c.pc.getStats(); let audio = null;
+      stats.forEach(r => { if (r.type === 'inbound-rtp' && r.kind === 'audio' && r.packetsReceived > 0) audio = r; });
+      if (!audio || !micOut.getAudioTracks().some(t => t.readyState === 'live')) continue;
+      const dDelay = (audio.jitterBufferDelay || 0) - jb.delay, dCount = (audio.jitterBufferEmittedCount || 0) - jb.count; jb = { delay: audio.jitterBufferDelay || 0, count: audio.jitterBufferEmittedCount || 0 };
+      const jbMs = dCount > 0 ? 1000 * dDelay / dCount : 0;
+      if (clock?.rtt) lastRtt.host = clock.rtt; const mine = rttOf(stats); if (mine) lastRtt.mine = mine;   // samples without a round trip keep the last one
+      target = Math.min(2000, lastRtt.host / 2 + lastRtt.mine / 2 + jbMs + 80);
+      if (++voiceLogN % 5 === 0) log(`voice delay parts: host rtt ${lastRtt.host.toFixed(0)} ms, my rtt ${lastRtt.mine.toFixed(0)} ms, jitter buffer ${jbMs.toFixed(0)} ms -> ${target.toFixed(0)} ms`);
+    }
+    const next = target ? Math.round(voiceMs ? voiceMs * 0.7 + target * 0.3 : target) : 0;
+    if (Math.abs(next - voiceMs) >= 20) { if (!voiceMs || !next) log(`voice alignment ${next ? 'on: film delayed ' + next + ' ms to match the host\'s voice' : 'off: no host audio'}`); voiceMs = next; }
+  }, 2000));
+  timers.push(setInterval(async () => {
+    for (const st of layerState.values()) {
+      if (st.conn.pc.connectionState !== 'connected') continue;
+      const stats = await st.conn.pc.getStats(); let lost = 0, recv = 0;
+      stats.forEach(r => { if (r.type === 'inbound-rtp' && r.kind === 'video') { lost += r.packetsLost || 0; recv += r.packetsReceived || 0; } });
+      const dl = lost - st.lastLost, dr = recv - st.lastRecv; st.lastLost = lost; st.lastRecv = recv;
+      const lossPct = dr + dl > 0 ? 100 * dl / (dr + dl) : 0; const i = RIDS.indexOf(st.rid);
+      if (lossPct > 5 && i < RIDS.length - 1) { await setLayer(st, RIDS[i + 1], `${lossPct.toFixed(0)}% loss`); continue; }
+      if (lossPct > 1) st.cleanSince = performance.now();
+      if (i > 0 && performance.now() - st.cleanSince > 30_000) await setLayer(st, RIDS[i - 1], 'clean for 30 s');
+    }
+  }, 10_000));
+  let lastB = 0, lastT = 0;
+  timers.push(setInterval(async () => { let bytes = 0; for (const pc of allPcs()) { if (pc.connectionState === 'closed') continue; const st = await pc.getStats(); st.forEach(r => { if ((r.type === 'outbound-rtp' || r.type === 'inbound-rtp') && !r.isRemote) bytes += r.bytesSent ?? r.bytesReceived ?? 0; }); } const now = performance.now(); if (lastT) $('kbps').textContent = `${Math.max(0, (bytes - lastB) * 8 / ((now - lastT) / 1000) / 1000).toFixed(0)} kbps`; lastT = now; lastB = bytes; }, 3000));
+
+  // security checks (host, TEST_MODE)
+  if (isHost) $('bChecks').onclick = async () => {
+    const set = (id, ok, detail) => { $(id).innerHTML = `<span class="${ok ? 'ok' : 'no'}">${ok ? 'PASS' : 'FAIL'}</span> ${detail}`; };
+    ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'].forEach(id => $(id).textContent = '…');
+    const probe = 'probe-' + Math.random().toString(36).slice(2, 8);
+    let r = await api('POST', P('/join'), { userId: probe, deviceId: 'probe' }); set('c1', r.status === 402, `${r.status} "${r.body.error || ''}"`);
+    if (r.status !== 402) { ['c2', 'c3', 'c4', 'c5', 'c6'].forEach(id => set(id, false, 'TEST_MODE is off on the server')); return; }
+    await api('POST', P('/ticket'), { userId: probe });
+    r = await api('POST', P('/join'), { userId: probe, deviceId: 'probe' }); if (r.status !== 200) { ['c2', 'c3', 'c4', 'c5', 'c6'].forEach(id => set(id, false, `probe could not join: ${r.status}`)); return; }
+    const pt = r.body; const sock = new WebSocket(pt.ws); const got = []; let closeCode = null;
+    await new Promise((res) => { sock.onopen = res; sock.onclose = (e) => { closeCode = e.code; }; sock.onmessage = (e) => { try { got.push(JSON.parse(e.data)); } catch {} }; });
+    sock.send(JSON.stringify({ t: 'clock', state: 'playing', position: 9999 }));
+    for (let i = 0; i < 4; i++) sock.send(JSON.stringify({ t: 'chat', text: `probe burst ${i}` }));
+    await new Promise(r => setTimeout(r, 1200));
+    const forb = got.find(m => m.t === 'error' && m.code === 'forbidden'); const moved = clock && clock.position === 9999;
+    set('c2', !!forb && !moved, forb ? `refused; clock ${moved ? 'MOVED' : 'unchanged'}` : 'no refusal received');
+    const rateErr = got.filter(m => m.t === 'error' && m.code === 'rate').length, accepted = got.filter(m => m.t === 'chat' && m.msg.userId === probe).length;
+    set('c5', accepted <= 1 && rateErr >= 3, `${accepted} accepted, ${rateErr} refused of 4`);
+    r = await api('POST', P('/rtc/publish'), { sessionId: 'x', offer: { type: 'offer', sdp: 'v=0' }, tracks: [{ mid: '0', trackName: 'cam', kind: 'video' }] }, { Authorization: 'Bearer ' + pt.token }); set('c3', r.status === 403, `${r.status}`);
+    const other = await fetch(`/media/not-this-film/v1/url/master.m3u8?t=${pt.token}`); const own = await fetch(pt.hls); set('c4', other.status === 401 && own.status === 200, `other ${other.status}, own ${own.status}`);
+    wsSend({ t: 'kick', userId: probe }); await new Promise(r => setTimeout(r, 1500));
+    r = await api('POST', P('/join'), { userId: probe, deviceId: 'probe' }); set('c6', closeCode === 4001 && r.status === 403, `closed ${closeCode ?? '-'}, rejoin ${r.status}`);
+  };
+
+  connectWs();
+  window.__party = { hostGroups, viewerConns, layerState, allPcs, me: me_ };   // test hook
+  return async () => { closed = true; timers.forEach(clearInterval); try { ws?.close(1000, 'left'); } catch {} for (const g of [...hostGroups.keys()]) { try { await unpublishGroup(g); } catch {} } camStream?.getTracks().forEach(t => t.stop()); micStream?.getTracks().forEach(t => t.stop()); clearRemote(); if (player) await player.destroy(); delete window.__party; };
+}
+
+// ---- boot -------------------------------------------------------------------------------------------------------
+// Boot: setting the hash fires hashchange, which routes; calling route() as well rendered the first view twice.
+(async () => { me = await whoAmI(); if (!location.hash) location.hash = me ? '#/home' : '#/login'; else route(); })();
+</script>
+</body>
+</html>

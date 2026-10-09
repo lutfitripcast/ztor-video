@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ztor. test console</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.12.6/shaka-player.compiled.min.js"></script>
+<style>
+  :root{--bg:#0a0a0a;--surface:#141414;--line:#262626;--fg:#f4f1ec;--muted:#a39e96;--accent:#ffa33f;--accent-soft:#2a1c0c;--good:#5fd394;--bad:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:20px 16px 48px}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:26px;letter-spacing:-.03em;margin:0}h1 span{color:var(--accent)}
+  .sub{color:var(--muted);margin:2px 0 18px;font-size:14px}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:16px}
+  @media (max-width:820px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;font-weight:700}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  input,select{width:100%;font:inherit;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:#0f0f0f;color:var(--fg)}
+  .check{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;color:var(--fg)}
+  .check input{width:auto}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  button{font:inherit;font-weight:700;padding:9px 13px;border-radius:999px;border:1px solid var(--line);background:#1c1c1c;color:var(--fg);cursor:pointer}
+  button.primary{background:var(--accent);color:#0a0a0a;border-color:var(--accent)}
+  button:disabled{opacity:.45;cursor:default}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:10px}
+  .kv b{color:var(--muted);font-weight:600}
+  .ok{color:var(--good)}.no{color:var(--bad)}
+  video{width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;display:block}
+  #policy{margin:0 0 10px;padding:9px 13px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:14px}
+  .row{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin:10px 0 0}
+  .row b{color:var(--fg)}
+  .row select{width:auto;padding:4px 8px}
+  pre{background:#0f0f0f;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-all;max-height:320px;overflow:auto;margin:10px 0 0}
+  .checks{display:grid;gap:6px;margin-top:8px;font-size:14px}
+  .checks div{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:7px 0}
+  .checks span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ztor<span>.</span> test console</h1>
+  <p class="sub">Option 5B test console. Each film can have two versions: <b>DRM</b> (encrypted, vendor license) and <b>Protected URL</b> (clear segments behind signed 4 h links). Pick the version below.</p>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>1. Who and what</h2>
+        <label for="film">Film</label>
+        <select id="film"></select>
+        <label for="mode">Version</label>
+        <select id="mode">
+          <option value="drm">DRM version: encrypted, key from the DRM vendor</option>
+          <option value="url">Protected URL version: signed links, no encryption</option>
+        </select>
+        <label for="user">Viewer (user id)</label>
+        <input id="user" value="fan-1">
+        <label class="check"><input id="hdcp" type="checkbox" checked> device has HDCP (4K capable)</label>
+        <div class="btns">
+          <button id="bRent">Rent 48 h</button>
+          <button id="bRevoke">Revoke rental</button>
+          <button id="bRefresh">Refresh</button>
+        </div>
+        <div class="kv">
+          <b>rental</b><span id="sRental">-</span>
+          <b>film</b><span id="sFilm">-</span>
+          <b>keys</b><span id="sKeys">-</span>
+          <b>last encode</b><span id="sEnc">-</span>
+          <b>licenses, this viewer</b><span id="sLic">-</span>
+          <b>licenses, all viewers</b><span id="sLicAll">-</span>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>2. Security checks</h2>
+        <div class="checks" id="checks">
+          <div><span>Play without rental should be refused</span><span id="c1">-</span></div>
+          <div><span>Manifest without pass should be refused</span><span id="c2">-</span></div>
+          <div><span>Forged pass should be refused</span><span id="c3">-</span></div>
+          <div><span>Segment is public but encrypted</span><span id="c4">-</span></div>
+          <div><span>License without pass should be refused</span><span id="c5">-</span></div>
+          <div><span>License door limits to 10 per minute</span><span id="c6">-</span></div>
+          <div><span>4K key entitled regardless of the HDCP box (hardware DRM decides)</span><span id="c7">-</span></div>
+          <div><span>URL version: segment refused without its pass, and refused with a DRM pass</span><span id="c8">-</span></div>
+          <div><span>URL version: segment with a pass is CLEAR (saveable), unlike the DRM version</span><span id="c9">-</span></div>
+        </div>
+        <div class="btns"><button id="bChecks" class="primary">Run all checks</button></div>
+        <p class="hint">Checks use a throwaway viewer "probe-…" so your own rental and rate limit are untouched.</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>3. Watch</h2>
+        <div class="btns" style="margin:0 0 12px">
+          <button id="bPass">Request pass</button>
+          <button id="bPlay" class="primary">Play</button>
+          <button id="bStop">Stop</button>
+        </div>
+        <p id="policy" hidden></p>
+        <video id="v" controls playsinline></video>
+        <div class="row">
+          <span>status <b id="st">idle</b></span>
+          <span>playing <b id="res">-</b></span>
+          <span>quality <select id="q"><option value="auto">auto</option></select></span>
+          <span>buffer <b id="buf">-</b></span>
+          <span>licenses this session <b id="lic">0</b></span>
+        </div>
+        <pre id="log"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const log = (m) => { const el = $('log'); el.textContent += `[${new Date().toISOString().slice(11,19)}] ${m}\n`; el.scrollTop = el.scrollHeight; };
+let testKey = null; try { testKey = localStorage.getItem('ztor-test-key'); } catch {}
+const api = async (method, path, body, headers = {}) => {
+  if (path.startsWith('/test/') && testKey) headers = { 'x-test-key': testKey, ...headers };   // only if the operator set a key
+  const r = await fetch(path, { method, headers: { 'content-type': 'application/json', ...headers }, body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 401 && path.startsWith('/test/')) { testKey = prompt('This console is key-protected. Test console key:'); try { testKey ? localStorage.setItem('ztor-test-key', testKey) : localStorage.removeItem('ztor-test-key'); } catch {} }
+  let j = null; try { j = await r.clone().json(); } catch { j = await r.text(); }
+  return { status: r.status, body: j, headers: r.headers };
+};
+const film = () => $('film').value, user = () => $('user').value.trim(), mode = () => $('mode').value;
+const filmProtections = () => ($('film').selectedOptions[0]?.dataset.prot || 'drm').split(',');
+function syncMode() {   // the URL option is only offered for films that were packaged with a protected-URL version
+  const has = filmProtections().includes('url'); const opt = $('mode').querySelector('option[value="url"]');
+  opt.disabled = !has; opt.textContent = has ? 'Protected URL version: signed links, no encryption' : 'Protected URL version: not built for this film';
+  if (!has) $('mode').value = 'drm';
+}
+let player, pass = null, lic = 0;
+
+// ---- 1. state ------------------------------------------------------------------------
+async function loadFilms() {
+  const { body } = await api('GET', '/test/films');
+  const cur = $('film').value;
+  $('film').innerHTML = body.map(f => `<option value="${f.id}" data-prot="${f.protections || 'drm'}">${f.title} (v${f.version}${(f.protections || 'drm').includes('url') ? ', DRM + URL' : ''})</option>`).join('') || '<option>no ready films</option>';
+  if (cur && body.some(f => f.id === cur)) $('film').value = cur;
+  const q = new URLSearchParams(location.search); if (q.get('film') && body.some(f => f.id === q.get('film'))) $('film').value = q.get('film');
+}
+async function refresh() {
+  if (!film()) return;
+  syncMode();
+  const { body: s } = await api('GET', `/test/status/${film()}?user=${encodeURIComponent(user())}`);
+  $('sRental').innerHTML = s.rental.active ? `<span class="ok">active</span> until ${s.rental.expires_at.slice(0,16).replace('T',' ')} UTC` : '<span class="no">none</span>';
+  $('sFilm').textContent = `${film().slice(0, 8)}… · versions: ${(s.protections || 'drm').replace('url', 'protected URL').replace('drm', 'DRM')}`;
+  $('sKeys').textContent = s.keys.map(k => `${k.label} (${k.scheme})`).join(', ');
+  const enc = s.lastEncode.find(r => r.step === 'encode');
+  $('sEnc').textContent = enc ? `${enc.wall_s.toFixed(0)} s wall, ${enc.cpu_s ? enc.cpu_s.toFixed(0) : '?'} s CPU` : '-';
+  $('sLic').textContent = `${s.licensesThisUser}${s.lastLicense ? ' (last ' + s.lastLicense.slice(11,19) + ' UTC)' : ''}`;
+  $('sLicAll').textContent = s.licensesAllUsers;
+}
+$('bRent').onclick = async () => { const r = await api('POST', '/test/rent', { userId: user(), filmId: film(), hours: 48 }); log(`rent -> ${r.status} ${JSON.stringify(r.body)}`); refresh(); };
+$('bRevoke').onclick = async () => { const r = await api('DELETE', '/test/rent', { userId: user(), filmId: film() }); log(`revoke -> ${r.status}`); pass = null; refresh(); };
+$('bRefresh').onclick = refresh;
+$('film').onchange = refresh; $('user').onchange = refresh; $('mode').onchange = () => { pass = null; refresh(); };
+
+// ---- 3. watch --------------------------------------------------------------------------
+async function requestPass() {
+  const r = await api('POST', `/play/${film()}`, { userId: user(), deviceId: 'web-' + navigator.userAgent.slice(0, 20), caps: { hdcp: $('hdcp').checked }, mode: mode() });
+  if (r.status !== 200) { pass = null; $('st').textContent = `refused (${r.status})`; log(`/play -> ${r.status} "${r.body.error}"`); $('policy').hidden = true; return null; }
+  pass = { ...r.body, filmId: film(), mode: mode() };
+  const claims = JSON.parse(atob(pass.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+  log(`/play (${pass.mode} version) -> 200. pass for ${pass.expiresInS/3600} h, claims ${JSON.stringify(claims)}`);
+  log(`policy: maxHeight=${pass.policy.maxHeight}, rental window ${pass.policy.rentalWindowH} h, offline ${pass.policy.offline}. ${pass.policy.reason}`);
+  const pol = $('policy'); pol.hidden = pass.policy.maxHeight >= 2160; pol.textContent = 'This device plays up to 1080p.';
+  $('st').textContent = 'pass issued';
+  return pass;
+}
+$('bPass').onclick = () => { requestPass(); refresh(); };
+$('bStop').onclick = async () => { if (player) { await player.destroy(); player = null; } $('st').textContent = 'stopped'; $('res').textContent = '-'; $('buf').textContent = '-'; };
+
+async function play() {
+  if (!pass || pass.filmId !== film() || pass.mode !== mode()) { if (!(await requestPass())) return; }
+  shaka.polyfill.installAll();
+  if (!shaka.Player.isBrowserSupported()) { log('browser not supported (Safari needs FairPlay, Phase B)'); return; }
+  if (player) await player.destroy();
+  lic = 0; $('lic').textContent = '0';
+  player = new shaka.Player(); await player.attach($('v'));
+  // Key system by browser. With a DRM vendor configured: Safari -> HLS + FairPlay, others -> DASH + Widevine (PlayReady on Edge).
+  // Without a vendor (Phase A): ClearKey stand-in. The Worker proxies every license and checks the pass first.
+  const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+  const urlMode = pass.mode === 'url';
+  const vd = urlMode ? null : pass.vendorDrm;
+  const drmCfg = urlMode ? {} : vd
+    ? { servers: { 'com.widevine.alpha': vd.widevine, 'com.microsoft.playready': vd.playready, 'com.apple.fps': vd.fairplay },
+        // no robustness requested here: the license server's per-key policy decides which keys this device may have
+        advanced: { 'com.apple.fps': { serverCertificateUri: vd.fairplayCertificate } } }
+    : { servers: { 'org.w3.clearkey': pass.licenseUrl } };
+  // Safari plays HLS natively for FairPlay and cannot send headers: keep the ?t= pass in the URL. DASH keeps the header.
+  // protected-URL version: the pass rides in every link (manifest rewrites the segment URLs), no key system at all
+  const manifestUrl = urlMode ? (isSafari ? pass.hls : pass.dash) : vd && isSafari ? pass.hls : pass.dash.split('?')[0];
+  if (urlMode) log('protection: signed URL only. Every manifest and segment link carries the 4 h pass; segments are clear, no license is ever requested.');
+  else log(`key system: ${vd ? (isSafari ? 'FairPlay (HLS)' : 'Widevine/PlayReady (DASH)') + ' via ' + vd.vendor : 'ClearKey stand-in (DASH)'}`);
+  // Shaka's own HLS engine on Safari (not the native player): gives track selection, buffering stats and header-based auth.
+  // Set ?nativehls=1 in the page URL to fall back to Safari's native HLS player.
+  const nativeHls = new URLSearchParams(location.search).get('nativehls') === '1';
+  // Prefer the key system this browser has: Shaka's polyfills otherwise probe only PlayReady for cbcs films on Chrome/Edge
+  // and fail with 6001 before trying Widevine (found 2026-09-24; the 09-21 "Chrome refuses cbcs" was this, not Chrome).
+  const preferredKeySystems = isSafari ? ['com.apple.fps'] : ['com.widevine.alpha', 'com.microsoft.playready'];
+  player.configure({ drm: { ...drmCfg, preferredKeySystems }, restrictions: { maxHeight: pass.policy.maxHeight }, streaming: { useNativeHlsForFairPlay: nativeHls } });
+  if (vd && isSafari) log(`Safari HLS engine: ${nativeHls ? 'native (Safari)' : 'Shaka MSE'}`);
+  const net = player.getNetworkingEngine(), T = shaka.net.NetworkingEngine.RequestType;
+  net.registerRequestFilter((type, req) => {
+    if (type === T.MANIFEST || type === T.LICENSE) req.headers['Authorization'] = 'Bearer ' + pass.token;   // segments carry no pass
+    if (type === T.LICENSE) { lic++; $('lic').textContent = lic; }
+  });
+  net.registerResponseFilter((type, resp) => {
+    if (type !== T.LICENSE) return;
+    const bytes = new Uint8Array(resp.data); let text = '';
+    try { text = new TextDecoder().decode(bytes); JSON.parse(text); } catch { text = ''; }
+    if (text) log(`LICENSE RESPONSE (${bytes.length} bytes) is plain JSON, keys EXPOSED to the page (ClearKey stand-in): ${text.replace(/\s+/g, ' ')}`);
+    else log(`LICENSE RESPONSE (${bytes.length} bytes) is opaque binary, key stays inside the device DRM module`);
+  });
+  const v = $('v');
+  ['waitingforkey', 'stalled', 'ended'].forEach(ev => v.addEventListener(ev, () => log(`video event: ${ev} at ${v.currentTime.toFixed(1)} s`)));
+  v.addEventListener('playing', () => $('st').textContent = 'playing');
+  v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; });
+  player.addEventListener('error', (e) => { log(`shaka error ${e.detail.code} ${e.detail.message || ''} data=${JSON.stringify(e.detail.data).slice(0, 300)}`); $('st').textContent = 'error'; });
+  player.addEventListener('buffering', (e) => { if (e.buffering && v.currentTime > 0) log(`buffering at ${v.currentTime.toFixed(1)} s`); });
+  player.addEventListener('keystatuschanged', () => log(`key statuses: ${JSON.stringify(player.getKeyStatuses())}`));
+  player.addEventListener('adaptation', showActive); player.addEventListener('variantchanged', showActive); player.addEventListener('trackschanged', fillPicker);
+  function showActive() { const t = player.getVariantTracks().find(t => t.active); if (t) $('res').textContent = `${t.width}x${t.height} @ ${(t.bandwidth/1e6).toFixed(1)} Mbps`; }
+  function fillPicker() {
+    const sel = $('q'), cur = sel.value; sel.innerHTML = '<option value="auto">auto</option>'; const seen = new Set();
+    player.getVariantTracks().sort((a, b) => b.height - a.height).forEach(t => { if (seen.has(t.height)) return; seen.add(t.height);
+      const o = document.createElement('option'); o.value = t.height; o.textContent = `${t.height}p`; sel.appendChild(o); });
+    sel.value = [...sel.options].some(o => o.value === cur) ? cur : 'auto';
+  }
+  $('q').onchange = () => { const h = $('q').value;
+    if (h === 'auto') { player.configure({ abr: { enabled: true } }); log('quality: auto'); return; }
+    const t = player.getVariantTracks().find(t => String(t.height) === h);
+    if (t) { player.configure({ abr: { enabled: false } }); player.selectVariantTrack(t, true, 6 /* keep one 6 s segment: no freeze on switch, see app.html */); log(`quality: ${t.height}p forced`); } };
+  setInterval(() => { if (!player) return; const b = player.getBufferedInfo().total, s = player.getStats();
+    $('buf').textContent = b.length ? `${Math.max(0, b[b.length-1].end - v.currentTime).toFixed(1)} s ahead, dropped ${s.droppedFrames}/${s.decodedFrames}` : '-'; }, 1000);
+  try {
+    $('st').textContent = 'loading';
+    await player.load(manifestUrl);
+    fillPicker(); showActive();
+    log(`loaded: ${player.getVariantTracks().length} tracks, ${v.duration.toFixed(1)} s, drm ${player.drmInfo()?.keySystem}`);
+    v.play();
+  } catch (e) { log(`load failed: ${e.code} ${e.message || ''} data=${JSON.stringify(e.data).slice(0, 300)} videoError=${$('v').error ? $('v').error.code + ' ' + $('v').error.message : 'none'}`); $('st').textContent = 'error'; }
+  refresh();
+}
+$('bPlay').onclick = play;
+
+// ---- 2. security checks ----------------------------------------------------------------
+$('bChecks').onclick = async () => {
+  const f = film(); if (!f) return;
+  const probe = 'probe-' + Math.random().toString(36).slice(2, 8);
+  const set = (id, ok, detail) => { $(id).innerHTML = `<span class="${ok ? 'ok' : 'no'}">${ok ? 'PASS' : 'FAIL'}</span> ${detail}`; };
+  ['c1','c2','c3','c4','c5','c6','c7','c8','c9'].forEach(id => $(id).textContent = '…');
+  log(`checks: using viewer ${probe}`);
+  const { body: st0 } = await api('GET', `/test/status/${f}?user=${probe}`);
+  let r = await api('POST', `/play/${f}`, { userId: probe, deviceId: 'probe' }); set('c1', r.status === 402, `${r.status} "${r.body.error || ''}"`);
+  const version = $('film').selectedOptions[0].textContent.match(/v(\d+)/)[1];
+  r = await api('GET', `/media/${f}/v${version}/manifest.mpd`); set('c2', r.status === 401, `${r.status}`);
+  r = await api('GET', `/media/${f}/v${version}/master.m3u8`, null, { Authorization: 'Bearer forged.pass.value' }); set('c3', r.status === 401, `${r.status}`);
+  // every segment must carry sample-encryption boxes (senc): clear_lead is 0 for paid films
+  const segChecks = await Promise.all([1, 3].map(async (n) => { const r = await fetch(`/media/${f}/v${version}/video_360p/${n}.m4s`); const b = new Uint8Array(await r.arrayBuffer()); return { n, status: r.status, kb: (b.length/1e3).toFixed(0), enc: new TextDecoder('latin1').decode(b).includes('senc') }; }));
+  set('c4', segChecks.every(s => s.status === 200 && s.enc), segChecks.map(s => `seg ${s.n}: ${s.status}, ${s.kb} kB, ${s.enc ? 'encrypted' : 'CLEAR'}`).join('; '));
+  const licPath = st0.vendor ? '/license/widevine' : '/license/clearkey';
+  r = await api('POST', licPath, { kids: [] }); set('c5', r.status === 401, `${r.status} (${licPath})`);
+  await api('POST', '/test/rent', { userId: probe, filmId: f, hours: 1 });
+  const noHdcp = await api('POST', `/play/${f}`, { userId: probe, deviceId: 'probe', caps: { hdcp: false } });
+  const withHdcp = await api('POST', `/play/${f}`, { userId: probe, deviceId: 'probe', caps: { hdcp: true } });
+  // 4K entitlement: the pass's policy decides whether the 2160p key is issued (server-side, verified via the manifests below)
+  const heights = async (tok) => { const m = await fetch(`/media/${f}/v${version}/master.m3u8?t=${tok}`).then(r => r.text()); return [...m.matchAll(/RESOLUTION=\d+x(\d+)/g)].map(x => Number(x[1])); };
+  const hNo = await heights(noHdcp.body.token), hYes = await heights(withHdcp.body.token);
+  const l1 = { n: Math.max(...hNo) >= 2160 ? 3 : 2 }, l2 = { n: Math.max(...hYes) >= 2160 ? 3 : 2 };
+  const nKeys = (l) => l.n;
+  const { body: st } = await api('GET', `/test/status/${f}?user=${probe}`);
+  const hasUhdRung = Math.max(...hYes) >= 2160;   // a 1080p source has a UHD key but no 2160p rung, so the policy has nothing to withhold
+  if (hasUhdRung) set('c7', nKeys(l2) === 3 && nKeys(l1) === 3, `manifest offers ${Math.max(...hNo)}p without the HDCP box, ${Math.max(...hYes)}p with; the licence's UHD policy (hardware DRM) decides on the device`);
+  else set('c7', Math.max(...hNo) <= 1080, `n/a: film tops out at ${Math.max(...hYes)}p, no 2160p rung to withhold`);
+  if (st.licenseRateLimit === 0) set('c6', true, 'n/a: rate limit disabled for testing (LICENSE_RATE_LIMIT=0); proposal step 8 wants 10/min before launch');
+  else { const codes = []; for (let i = 0; i < st.licenseRateLimit + 2; i++) codes.push((await api('POST', licPath, { kids: [] }, { Authorization: 'Bearer ' + withHdcp.body.token })).status);
+    set('c6', codes.includes(429), `${codes.filter(c => c !== 429).length} forwarded, then ${codes.filter(c => c === 429).length} refused (429), limit ${st.licenseRateLimit}/min`); }
+  // protected-URL version: clear files, so the pass must guard every segment, and a DRM pass must not open them
+  if (filmProtections().includes('url')) {
+    const segUrl = `/media/${f}/v${version}/url/video_360p/1.m4s`;
+    const noPass = await fetch(segUrl), drmPass = await fetch(`${segUrl}?t=${withHdcp.body.token}`);
+    set('c8', noPass.status === 401 && drmPass.status === 401, `no pass ${noPass.status}, DRM pass ${drmPass.status}`);
+    const up = await api('POST', `/play/${f}`, { userId: probe, deviceId: 'probe', mode: 'url' });
+    const r9 = await fetch(`${segUrl}?t=${up.body.token}`); const b9 = new Uint8Array(await r9.arrayBuffer());
+    const enc9 = /senc|encv|tenc/.test(new TextDecoder('latin1').decode(b9));
+    set('c9', r9.status === 200 && !enc9, `${r9.status}, ${(b9.length/1e3).toFixed(0)} kB, ${enc9 ? 'encrypted?!' : 'CLEAR: anyone holding the link inside its 4 h window can save the file'}`);
+  } else { set('c8', true, 'n/a: no protected-URL version'); set('c9', true, 'n/a'); }
+  await api('DELETE', '/test/rent', { userId: probe, filmId: f });
+  log(`checks done for ${probe}; rental revoked`);
+  refresh();
+};
+
+// ---- DRM capability probe: what THIS browser's DRM modules accept --------------------------
+async function probeDrm() {
+  const video = 'video/mp4; codecs="avc1.640028"', audio = 'audio/mp4; codecs="mp4a.40.2"';
+  const tryKs = async (ks, scheme, robustness) => {
+    const cap = { contentType: video, ...(scheme ? { encryptionScheme: scheme } : {}), ...(robustness ? { robustness } : {}) };
+    try { const a = await navigator.requestMediaKeySystemAccess(ks, [{ initDataTypes: ['cenc', 'skd', 'sinf'], videoCapabilities: [cap], audioCapabilities: [{ contentType: audio, ...(scheme ? { encryptionScheme: scheme } : {}) }] }]);
+      const cfg = a.getConfiguration(); return `yes${cfg.videoCapabilities?.[0]?.encryptionScheme ? ' (' + cfg.videoCapabilities[0].encryptionScheme + ')' : ''}`; }
+    catch (e) { return 'no'; } };
+  const rows = [];
+  for (const ks of ['com.widevine.alpha', 'com.microsoft.playready.recommendation', 'com.apple.fps', 'org.w3.clearkey']) {
+    rows.push(`${ks}: any=${await tryKs(ks)} cenc=${await tryKs(ks, 'cenc')} cbcs=${await tryKs(ks, 'cbcs')}${ks === 'com.widevine.alpha' ? ' HW_SECURE_ALL=' + await tryKs(ks, null, 'HW_SECURE_ALL') : ''}`);
+  }
+  rows.push(`MSE cbcs video: ${MediaSource.isTypeSupported ? MediaSource.isTypeSupported(video) : 'n/a'}; native HLS: ${document.createElement('video').canPlayType('application/vnd.apple.mpegurl') || 'no'}`);
+  log('DRM capability probe:\n    ' + rows.join('\n    '));
+}
+// ---- boot ------------------------------------------------------------------------------
+(async () => { await loadFilms(); const q = new URLSearchParams(location.search); if (q.get('user')) $('user').value = q.get('user'); await refresh(); probeDrm(); })();
+</script>
+</body>
+</html>

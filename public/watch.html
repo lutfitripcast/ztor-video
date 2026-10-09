@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ztor. watch party</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.12.6/shaka-player.compiled.min.js"></script>
+<style>
+  :root{--bg:#0a0a0a;--surface:#141414;--line:#262626;--fg:#f4f1ec;--muted:#a39e96;--accent:#ffa33f;--accent-soft:#2a1c0c;--good:#5fd394;--bad:#ff6b6b;--live:#ff3b5c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px 16px 40px}
+  .wrap{max-width:1280px;margin:0 auto}
+  h1{font-size:24px;letter-spacing:-.03em;margin:0}h1 span{color:var(--accent)}
+  .sub{color:var(--muted);margin:2px 0 14px;font-size:14px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;font-weight:700}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  input,select{width:100%;font:inherit;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:#0f0f0f;color:var(--fg)}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  button{font:inherit;font-weight:700;padding:8px 13px;border-radius:999px;border:1px solid var(--line);background:#1c1c1c;color:var(--fg);cursor:pointer}
+  button.primary{background:var(--accent);color:#0a0a0a;border-color:var(--accent)}
+  button.on{background:#1f3a2a;border-color:var(--good);color:var(--good)}
+  button.danger{border-color:var(--bad);color:var(--bad)}
+  button:disabled{opacity:.45;cursor:default}
+  .ok{color:var(--good)}.no{color:var(--bad)}.dim{color:var(--muted)}
+  .setup{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:820px){.setup{grid-template-columns:1fr}}
+  .stage{display:grid;grid-template-columns:1fr 360px;gap:16px}
+  @media (max-width:980px){.stage{grid-template-columns:1fr}}
+  .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+  .badge{font-size:12px;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:999px;background:#222;color:var(--muted)}
+  .badge.live{background:var(--live);color:#fff}
+  .film{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9}
+  .film video{width:100%;height:100%;display:block;background:#000}
+  #cam{position:absolute;right:10px;bottom:10px;width:20%;min-width:130px;max-width:210px;height:auto;aspect-ratio:16/9;border-radius:10px;border:2px solid rgba(255,255,255,.25);background:#000;object-fit:cover;display:none}
+  #gate{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6)}
+  #gate button{font-size:17px;padding:12px 22px}
+  #screen{width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;display:none;margin-top:12px}
+  .row{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin:10px 0 0}
+  .row b{color:var(--fg)}
+  .chat{display:flex;flex-direction:column;height:640px}
+  #pinned{background:var(--accent-soft);color:var(--accent);border:1px solid #4a2f10;border-radius:8px;padding:8px 10px;font-size:13px;margin-bottom:8px;display:none}
+  #pinned b{color:var(--fg)}
+  #msgs{flex:1;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px;background:#0f0f0f;font-size:14px}
+  .m{padding:4px 2px;border-bottom:1px solid #1b1b1b;display:flex;gap:6px;align-items:flex-start}
+  .m .who{color:var(--accent);font-weight:700;white-space:nowrap}
+  .m .who.host{color:var(--good)}
+  .m .txt{flex:1;word-break:break-word}
+  .m .act{display:none;gap:4px}
+  .m:hover .act{display:flex}
+  .m .act button{padding:1px 7px;font-size:11px;font-weight:600}
+  .m.sys{color:var(--muted);font-style:italic}
+  .compose{display:flex;gap:8px;margin-top:8px}
+  .compose input{flex:1}
+  .hostbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:13px;color:var(--muted)}
+  .hostbar select{width:auto;padding:4px 8px}
+  pre{background:#0f0f0f;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto;margin:10px 0 0}
+  .checks{display:grid;gap:6px;margin-top:8px;font-size:14px}
+  .checks div{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:7px 0}
+  .checks span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:10px}
+  .kv b{color:var(--muted);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ztor<span>.</span> watch party</h1>
+  <p class="sub">One host, one film, everyone in sync. The film streams from R2 as the <b>protected-URL</b> version (each viewer's own 4 h pass, capped at 1080p). The host's camera, mic and screen go through Cloudflare Realtime SFU (WebRTC). Chat, pins, moderation and the playback clock live in a Durable Object.</p>
+
+  <div id="setup" class="setup">
+    <div class="card">
+      <h2>Host a party</h2>
+      <label for="hFilm">Film (needs a protected-URL version)</label>
+      <select id="hFilm"></select>
+      <label for="hUser">Host (user id)</label>
+      <input id="hUser" value="host-1">
+      <label for="hTitle">Title</label>
+      <input id="hTitle" placeholder="Friday premiere">
+      <div class="btns">
+        <button id="bHostRent">Rent 48 h</button>
+        <button id="bCreate" class="primary">Create party</button>
+      </div>
+      <p class="hint">Creating a party issues a shareable link. Open it in other browsers as viewers.</p>
+    </div>
+    <div class="card">
+      <h2>Join a party</h2>
+      <label for="jParty">Party id</label>
+      <input id="jParty" placeholder="from the host's link">
+      <label for="jUser">You (user id)</label>
+      <input id="jUser" value="fan-1">
+      <div class="btns">
+        <button id="bRent">Rent 48 h</button>
+        <button id="bJoin" class="primary">Join</button>
+      </div>
+      <div class="kv">
+        <b>party</b><span id="jInfo">-</span>
+        <b>rental</b><span id="jRental">-</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="stage" class="stage" hidden>
+    <div>
+      <div class="card">
+        <div class="bar">
+          <span class="badge" id="bLive">OFFLINE</span>
+          <b id="title"></b>
+          <span class="dim" id="filmTitle"></span>
+          <span class="dim">·</span>
+          <span><b id="viewers">0</b> <span class="dim">watching</span></span>
+          <span class="dim" id="roleTag"></span>
+          <span style="flex:1"></span>
+          <span class="dim" id="sync">-</span>
+        </div>
+        <div class="film">
+          <video id="v" playsinline></video>
+          <video id="cam" autoplay playsinline></video>
+          <div id="gate"><button id="bGate" class="primary">Tap to watch with sound</button></div>
+        </div>
+        <video id="screen" autoplay playsinline></video>
+        <div class="btns" id="hostCtl" hidden>
+          <button id="bCam">Camera</button>
+          <button id="bMic">Mic</button>
+          <button id="bScreen">Share screen</button>
+          <span style="flex:1"></span>
+          <button id="bEnd" class="danger">End party</button>
+        </div>
+        <div class="row">
+          <span>player <b id="st">idle</b></span>
+          <span>quality <b id="res">-</b></span>
+          <span>clock <b id="clk">-</b></span>
+          <span>host feed <b id="rtc">-</b></span>
+          <span>host bitrate <b id="kbps">-</b></span>
+        </div>
+        <pre id="log"></pre>
+      </div>
+      <div class="card" style="margin-top:16px" id="checksCard" hidden>
+        <h2>Security checks (host)</h2>
+        <div class="checks">
+          <div><span>Join without a ticket should be refused</span><span id="c1">-</span></div>
+          <div><span>Viewer cannot move the clock</span><span id="c2">-</span></div>
+          <div><span>Viewer cannot publish camera / mic</span><span id="c3">-</span></div>
+          <div><span>Party ticket does not open another film</span><span id="c4">-</span></div>
+          <div><span>Chat rate limit holds</span><span id="c5">-</span></div>
+          <div><span>Kicked viewer cannot rejoin</span><span id="c6">-</span></div>
+        </div>
+        <div class="btns"><button id="bChecks" class="primary">Run all checks</button></div>
+        <p class="hint">Uses a throwaway viewer "probe-…" that rents, joins, misbehaves and is removed. Your party is untouched.</p>
+      </div>
+    </div>
+    <div class="card chat">
+      <h2>Chat</h2>
+      <div id="pinned"></div>
+      <div id="msgs"></div>
+      <div class="compose">
+        <input id="text" placeholder="Say something…" maxlength="500">
+        <button id="bSend" class="primary">Send</button>
+      </div>
+      <div class="hostbar" id="modbar" hidden>
+        <span>slow mode</span>
+        <select id="slow"><option value="0">off</option><option value="5">5 s</option><option value="15">15 s</option><option value="60">60 s</option></select>
+        <button id="bUnpin">Unpin</button>
+      </div>
+      <div class="hint" id="chatHint"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const log = (m) => { const el = $('log'); el.textContent += `[${new Date().toISOString().slice(11,19)}] ${m}\n`; el.scrollTop = el.scrollHeight; };
+let testKey = null; try { testKey = localStorage.getItem('ztor-test-key'); } catch {}
+const api = async (method, path, body, headers = {}) => {
+  if (path.startsWith('/test/') && testKey) headers = { 'x-test-key': testKey, ...headers };
+  const r = await fetch(path, { method, headers: { 'content-type': 'application/json', ...headers }, body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 401 && path.startsWith('/test/')) { testKey = prompt('This console is key-protected. Test console key:'); try { testKey ? localStorage.setItem('ztor-test-key', testKey) : localStorage.removeItem('ztor-test-key'); } catch {} }
+  let j = null; try { j = await r.clone().json(); } catch { j = await r.text(); }
+  return { status: r.status, body: j };
+};
+const q = new URLSearchParams(location.search);
+const deviceId = 'web-' + navigator.userAgent.slice(0, 20);
+let me = null;          // join response: token, role, ws, dash, hls, ...
+let ws = null, player = null, clock = null, offset = 0, userStarted = false, pinnedSeq = null;
+const auth = () => ({ Authorization: 'Bearer ' + me.token });
+const P = (path) => `/party/${me.partyId}${path}`;
+
+// ---- setup -------------------------------------------------------------------------------------------
+async function loadFilms() {
+  const { body } = await api('GET', '/test/films');
+  const films = (Array.isArray(body) ? body : []).filter(f => (f.protections || 'drm').includes('url'));
+  $('hFilm').innerHTML = films.map(f => `<option value="${f.id}">${f.title} (v${f.version})</option>`).join('') || '<option value="">no film has a protected-URL version yet</option>';
+}
+async function partyInfo() {
+  const id = $('jParty').value.trim(); if (!id) return;
+  const r = await api('GET', `/party/${id}`);
+  $('jInfo').innerHTML = r.status === 200 ? `${r.body.title} · ${r.body.status} · ${r.body.viewers} watching${r.body.hostLive ? ' · <span class="ok">host live</span>' : ''}${r.body.realtime ? '' : ' · <span class="no">SFU not configured</span>'}` : `<span class="no">${r.status} ${r.body.error || ''}</span>`;
+  if (r.status === 200) { const s = await api('GET', `/test/status/${r.body.filmId}?user=${encodeURIComponent($('jUser').value.trim())}`); $('jRental').innerHTML = s.body?.rental?.active ? '<span class="ok">active</span>' : '<span class="no">none: rent first</span>'; }
+}
+$('jParty').onchange = partyInfo; $('jUser').onchange = partyInfo;
+$('bHostRent').onclick = async () => { const r = await api('POST', '/test/rent', { userId: $('hUser').value.trim(), filmId: $('hFilm').value, hours: 48 }); alert(r.status === 200 ? 'rented' : `${r.status} ${JSON.stringify(r.body)}`); };
+$('bRent').onclick = async () => { const info = await api('GET', `/party/${$('jParty').value.trim()}`); if (info.status !== 200) return alert('party not found'); const r = await api('POST', '/test/rent', { userId: $('jUser').value.trim(), filmId: info.body.filmId, hours: 48 }); alert(r.status === 200 ? 'rented' : `${r.status} ${JSON.stringify(r.body)}`); partyInfo(); };
+$('bCreate').onclick = async () => {
+  const r = await api('POST', '/party', { hostId: $('hUser').value.trim(), filmId: $('hFilm').value, title: $('hTitle').value.trim() || undefined });
+  if (r.status !== 200) return alert(`${r.status} ${r.body.error || JSON.stringify(r.body)}`);
+  location.href = `/watch?party=${r.body.partyId}&user=${encodeURIComponent($('hUser').value.trim())}`;
+};
+$('bJoin').onclick = () => join($('jParty').value.trim(), $('jUser').value.trim());
+
+async function join(partyId, userId) {
+  await api('POST', `/party/${partyId}/ticket`, { userId });   // tickets are the only door for viewers (2026-09-25); the host needs none
+  const r = await api('POST', `/party/${partyId}/join`, { userId, deviceId });
+  if (r.status !== 200) { $('jInfo').innerHTML = `<span class="no">join refused: ${r.status} ${r.body.error || ''}</span>`; return; }
+  me = r.body; try { localStorage.setItem('ztor-party-user', userId); } catch {}
+  history.replaceState(null, '', `/watch?party=${partyId}&user=${encodeURIComponent(userId)}`);
+  $('setup').hidden = true; $('stage').hidden = false;
+  $('title').textContent = me.title; $('filmTitle').textContent = me.filmTitle; $('roleTag').textContent = me.role === 'host' ? '· you are the host' : `· you are ${userId}`;
+  $('hostCtl').hidden = me.role !== 'host'; $('modbar').hidden = me.role !== 'host'; $('checksCard').hidden = me.role !== 'host';
+  $('chatHint').textContent = me.role === 'host' ? 'Hover a message to pin, mute or remove.' : 'One message every 1.5 s (more in slow mode).';
+  log(`joined as ${me.role}. ticket ${me.expiresInS/3600} h; film pass mode=url, maxHeight ${me.policy.maxHeight}. ${me.policy.sync}. Realtime SFU ${me.realtime ? 'configured' : 'NOT configured (camera/mic disabled)'}`);
+  connectWs();
+  await loadFilm();
+  if (me.role === 'host') { $('v').controls = true; hostClockHooks(); }
+  else { $('v').controls = false; $('gate').style.display = 'flex'; }
+}
+$('bGate').onclick = () => { userStarted = true; $('gate').style.display = 'none'; const v = $('v'); v.muted = false; v.play().catch(() => {}); $('cam').play().catch(() => {}); $('screen').play().catch(() => {}); };
+
+// ---- film player (protected-URL version, same Shaka setup as the console) ---------------------------------
+async function loadFilm() {
+  shaka.polyfill.installAll();
+  if (player) await player.destroy();
+  player = new shaka.Player(); await player.attach($('v'));
+  const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+  player.configure({ restrictions: { maxHeight: me.policy.maxHeight }, streaming: { bufferingGoal: 20, rebufferingGoal: 2 } });
+  player.addEventListener('error', (e) => { log(`shaka error ${e.detail.code} ${e.detail.message || ''}`); $('st').textContent = 'error'; });
+  player.addEventListener('adaptation', showActive); player.addEventListener('variantchanged', showActive);
+  const v = $('v');
+  v.addEventListener('playing', () => $('st').textContent = 'playing'); v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; }); v.addEventListener('waiting', () => $('st').textContent = 'buffering');
+  try { $('st').textContent = 'loading'; await player.load(isSafari ? me.hls : me.dash); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, ${player.getVariantTracks().length} tracks, protected-URL (no license requests)`); }
+  catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
+  if (me.role === 'viewer') setInterval(syncTick, 500);
+}
+function showActive() { const t = player?.getVariantTracks().find(t => t.active); if (t) $('res').textContent = `${t.height}p ${(t.bandwidth/1e6).toFixed(1)} Mbps`; }
+
+// ---- host: drive the clock -------------------------------------------------------------------------------
+function sendClock() { const v = $('v'); wsSend({ t: 'clock', state: v.paused ? 'paused' : 'playing', position: v.currentTime, rate: v.playbackRate }); $('clk').textContent = `${v.paused ? 'paused' : 'playing'} @ ${v.currentTime.toFixed(1)} s (you)`; }
+function hostClockHooks() { const v = $('v'); ['play', 'pause', 'seeked', 'ratechange', 'ended'].forEach(ev => v.addEventListener(ev, sendClock)); setInterval(() => { if (!v.paused) sendClock(); }, 5000); }
+
+// ---- viewer: follow the clock ----------------------------------------------------------------------------
+const expected = () => !clock ? null : clock.state === 'playing' ? clock.position + ((Date.now() + offset) - clock.at) / 1000 * clock.rate : clock.position;
+function syncTick() {
+  const v = $('v'); if (!clock || !player || isNaN(v.duration)) return;
+  const exp = Math.min(expected(), v.duration), d = v.currentTime - exp;
+  $('clk').textContent = `${clock.state} @ ${exp.toFixed(1)} s`; $('sync').textContent = `sync ${d >= 0 ? '+' : ''}${d.toFixed(2)} s`;
+  if (clock.state === 'paused') { if (!v.paused) v.pause(); if (Math.abs(d) > 0.5) v.currentTime = exp; v.playbackRate = 1; return; }
+  if (!userStarted) { if (Math.abs(d) > 1) v.currentTime = exp; return; }
+  if (v.paused) v.play().catch(() => {});
+  if (Math.abs(d) > 2) { v.currentTime = exp + 0.15; v.playbackRate = 1; log(`resync: was ${d.toFixed(1)} s off, seeked`); }
+  else if (d > 0.3) v.playbackRate = 0.95; else if (d < -0.3) v.playbackRate = 1.05; else v.playbackRate = 1;
+}
+
+// ---- WebSocket room ---------------------------------------------------------------------------------------
+const wsSend = (m) => { if (ws?.readyState === 1) ws.send(JSON.stringify(m)); };
+let wsRetry = 0;
+function connectWs() {
+  ws = new WebSocket(me.ws);
+  ws.onopen = () => { wsRetry = 0; log('room connected'); for (let i = 0; i < 3; i++) setTimeout(() => wsSend({ t: 'time', c: Date.now() }), i * 300); setInterval(() => { if (ws?.readyState === 1) ws.send('ping'); }, 25000); };
+  ws.onmessage = (e) => { if (e.data === 'pong') return; let m; try { m = JSON.parse(e.data); } catch { return; } onRoom(m); };
+  ws.onclose = (e) => { log(`room closed ${e.code} ${e.reason || ''}`); if (e.code === 4001) { alert('You were removed from this party.'); location.href = '/watch'; } else if (e.code === 4000) { $('bLive').textContent = 'ENDED'; $('bLive').className = 'badge'; } else if (wsRetry < 8) setTimeout(connectWs, Math.min(8000, 500 * 2 ** wsRetry++)); };
+}
+function onRoom(m) {
+  switch (m.t) {
+    case 'hello': clock = m.clock; setPinned(m.pinned); $('viewers').textContent = m.viewers; $('slow').value = m.slowModeS; (m.recent || []).forEach(addMsg); setLive(m.hostTracks, m.hostOnline); if (m.hostTracks) pullTracks(m.hostTracks); if (m.muted) $('chatHint').textContent = 'You are muted by the host.'; break;
+    case 'time': { const now = Date.now(); const rtt = now - m.c; offset = m.s - (m.c + rtt / 2); $('sync').textContent = `offset ${offset.toFixed(0)} ms rtt ${rtt} ms`; break; }
+    case 'chat': addMsg(m.msg); break;
+    case 'system': addSys(m.text); break;
+    case 'pin': setPinned(m.pinned); break;
+    case 'clock': clock = m.clock; break;
+    case 'roster': $('viewers').textContent = m.viewers; setLive(hostTracks, m.hostOnline); break;
+    case 'tracks': setLive(m.hostTracks, true); if (m.hostTracks) pullTracks(m.hostTracks); else if (me.role === 'viewer') clearRemote(); break;
+    case 'slow': $('slow').value = m.slowModeS; if (me.role !== 'host') $('chatHint').textContent = m.slowModeS ? `Slow mode: one message every ${m.slowModeS} s.` : 'One message every 1.5 s.'; break;
+    case 'muted': $('chatHint').textContent = m.muted ? 'You are muted by the host.' : 'You can chat again.'; break;
+    case 'kicked': break;
+    case 'ended': $('bLive').textContent = 'ENDED'; $('bLive').className = 'badge'; addSys('The host ended the party.'); break;
+    case 'error': log(`room refused: ${m.code} ${m.detail || ''}`); if (m.code === 'rate' || m.code === 'muted') $('chatHint').textContent = m.detail; break;
+  }
+}
+let hostTracks = null;
+function setLive(ht, hostOnline) { hostTracks = ht; const live = !!ht; $('bLive').textContent = live ? 'LIVE' : hostOnline ? 'HOST HERE' : 'OFFLINE'; $('bLive').className = 'badge' + (live ? ' live' : ''); $('rtc').textContent = live ? ht.tracks.map(t => labelOf(t.trackName)).join(', ') : '-'; }
+
+// ---- chat UI ---------------------------------------------------------------------------------------------
+function addMsg(msg) {
+  const d = document.createElement('div'); d.className = 'm'; d.dataset.seq = msg.seq;
+  d.innerHTML = `<span class="who ${msg.role === 'host' ? 'host' : ''}">${esc(msg.userId)}</span><span class="txt">${esc(msg.text)}</span>` +
+    (me.role === 'host' ? `<span class="act"><button data-a="pin">pin</button>${msg.role !== 'host' ? `<button data-a="mute">mute</button><button data-a="kick">remove</button>` : ''}</span>` : '');
+  d.querySelectorAll('button').forEach(b => b.onclick = () => { const a = b.dataset.a; if (a === 'pin') wsSend({ t: 'pin', seq: msg.seq, msg }); else if (a === 'kick' && confirm(`Remove ${msg.userId} from the party?`)) wsSend({ t: 'kick', userId: msg.userId }); else if (a === 'mute') wsSend({ t: 'mute', userId: msg.userId }); });
+  const box = $('msgs'); const stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 40; box.appendChild(d); while (box.children.length > 300) box.removeChild(box.firstChild); if (stick) box.scrollTop = box.scrollHeight;
+}
+function addSys(text) { const d = document.createElement('div'); d.className = 'm sys'; d.textContent = text; $('msgs').appendChild(d); $('msgs').scrollTop = $('msgs').scrollHeight; }
+function setPinned(p) { pinnedSeq = p?.seq ?? null; $('pinned').style.display = p ? 'block' : 'none'; if (p) $('pinned').innerHTML = `📌 <b>${esc(p.userId)}</b>: ${esc(p.text)}`; }
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+$('bSend').onclick = () => { const t = $('text').value.trim(); if (!t) return; wsSend({ t: 'chat', text: t }); $('text').value = ''; };
+$('text').onkeydown = (e) => { if (e.key === 'Enter') $('bSend').onclick(); };
+$('slow').onchange = () => wsSend({ t: 'slow', seconds: Number($('slow').value) });
+$('bUnpin').onclick = () => wsSend({ t: 'unpin' });
+$('bEnd').onclick = async () => { if (!confirm('End the party for everyone?')) return; const r = await api('POST', P('/end'), {}, auth()); log(`end -> ${r.status}`); };
+
+// ---- WebRTC via Realtime SFU ------------------------------------------------------------------------------
+// One PeerConnection (= one SFU session) per publish group, on both sides. Host: "cam" group (camera + mic) and
+// "screen" group (screen + its audio). Stopping a group closes its connection; restarting opens a fresh session.
+// Viewers open one connection per host session they pull from. Nothing is ever renegotiated on a live connection
+// except the SFU's own offer when a viewer first pulls, which avoids Chrome's "RTP extension ID reassignment" refusal.
+let gen = 0;
+const hostGroups = new Map();   // group -> { pc, sessionId, items: [{label, trackName, kind, mid}] }
+const labelOf = (trackName) => String(trackName).replace(/-\d+$/, '');   // trackName = label-<generation>
+const allPcs = () => [...hostGroups.values()].map(g => g.pc).concat([...viewerConns.values()].map(c => c.pc));
+async function newConn() {
+  const r = await api('POST', P('/rtc/session'), {}, auth());
+  if (r.status !== 200) throw new Error(`${r.status} ${r.body.error || ''}`);
+  const pc = new RTCPeerConnection({ iceServers: r.body.iceServers, bundlePolicy: 'max-bundle' });
+  pc.onconnectionstatechange = () => log(`webrtc ${r.body.sessionId.slice(0, 8)}… ${pc.connectionState}`);
+  return { pc, sessionId: r.body.sessionId, ice: r.body.iceServers.map(s => s.urls).flat().join(' ') };
+}
+const liveList = () => [...hostGroups.values()].flatMap(g => g.items.map(it => ({ sessionId: g.sessionId, trackName: it.trackName, kind: it.kind })));
+async function publishGroup(group, tracks) {   // tracks: [{track, label}]
+  if (hostGroups.has(group)) await unpublishGroup(group);
+  const conn = await newConn(); const g = ++gen;
+  // Simulcast: video goes up in three layers, rid a (full, 1.2 Mbps camera / 2.5 Mbps screen), b (half size), c (quarter size).
+  // Viewers receive one layer; the SFU steps a viewer down when its bandwidth cannot carry the preferred one.
+  const layers = (label) => label === 'screen'
+    ? [{ rid: 'a', maxBitrate: 2_500_000 }, { rid: 'b', scaleResolutionDownBy: 2, maxBitrate: 800_000 }, { rid: 'c', scaleResolutionDownBy: 4, maxBitrate: 250_000 }]
+    : [{ rid: 'a', maxBitrate: 1_200_000 }, { rid: 'b', scaleResolutionDownBy: 2, maxBitrate: 400_000 }, { rid: 'c', scaleResolutionDownBy: 4, maxBitrate: 150_000 }];
+  const items = tracks.map(({ track, label }) => ({ label, trackName: `${label}-${g}`, kind: track.kind,
+    transceiver: conn.pc.addTransceiver(track, track.kind === 'video' ? { direction: 'sendonly', sendEncodings: layers(label) } : { direction: 'sendonly' }) }));
+  for (const it of items) if (it.kind === 'audio') { const p = it.transceiver.sender.getParameters(); p.encodings = [{ maxBitrate: 64_000 }]; try { await it.transceiver.sender.setParameters(p); } catch {} }
+  const offer = await conn.pc.createOffer(); await conn.pc.setLocalDescription(offer);
+  const entry = { pc: conn.pc, sessionId: conn.sessionId, items: items.map(it => ({ label: it.label, trackName: it.trackName, kind: it.kind, mid: it.transceiver.mid })) };
+  const body = { sessionId: conn.sessionId, offer: { type: 'offer', sdp: conn.pc.localDescription.sdp }, tracks: entry.items.map(it => ({ mid: it.mid, trackName: it.trackName, kind: it.kind })),
+    allTracks: [...liveList(), ...entry.items.map(it => ({ sessionId: conn.sessionId, trackName: it.trackName, kind: it.kind }))] };
+  const r = await api('POST', P('/rtc/publish'), body, auth());
+  if (r.status !== 200) { conn.pc.close(); throw new Error(`publish ${r.status} ${r.body.error || ''}`); }
+  await conn.pc.setRemoteDescription(r.body.sessionDescription);
+  hostGroups.set(group, entry);
+  log(`published ${items.map(i => i.label).join(', ')} on session ${conn.sessionId.slice(0, 8)}… (ice ${conn.ice}; simulcast ${/a=simulcast:send/.test(conn.pc.localDescription.sdp) ? 'a/b/c' : 'OFF'})${r.body.failed?.length ? ' FAILED: ' + JSON.stringify(r.body.failed) : ''}`);
+}
+async function unpublishGroup(group) {
+  const g = hostGroups.get(group); if (!g) return;
+  hostGroups.delete(group);
+  try { g.pc.getSenders().forEach(s => s.track?.stop()); } catch {}
+  // best effort: tell the SFU (force, no renegotiation), then drop the connection; the room gets the remaining list
+  const r = await api('PUT', P('/rtc/close'), { sessionId: g.sessionId, tracks: g.items.map(it => ({ mid: it.mid })), force: true, allTracks: liveList() }, auth());
+  try { g.pc.close(); } catch {}
+  log(`stopped ${g.items.map(i => i.label).join(', ')} -> ${r.status}`);
+}
+$('bCam').onclick = async () => {
+  try {
+    if (hostGroups.has('cam')) { await unpublishGroup('cam'); camStream?.getTracks().forEach(t => t.stop()); camStream = null; $('cam').style.display = 'none'; $('bCam').classList.remove('on'); $('bMic').classList.remove('on'); return; }
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720, frameRate: 24 }, audio: { echoCancellation: true, noiseSuppression: true } });
+    $('cam').srcObject = camStream; $('cam').muted = true; $('cam').style.display = 'block';
+    await publishGroup('cam', [{ track: camStream.getVideoTracks()[0], label: 'cam' }, { track: camStream.getAudioTracks()[0], label: 'mic' }]);
+    $('bCam').classList.add('on'); $('bMic').classList.add('on');
+  } catch (e) { log(`camera: ${e.message}`); alert(`Camera: ${e.message}`); }
+};
+$('bMic').onclick = () => { const t = camStream?.getAudioTracks()[0]; if (!t) return alert('Turn the camera on first (mic is published with it).'); t.enabled = !t.enabled; $('bMic').classList.toggle('on', t.enabled); log(`mic ${t.enabled ? 'on' : 'muted'}`); };
+$('bScreen').onclick = async () => {
+  try {
+    if (hostGroups.has('screen')) { await unpublishGroup('screen'); screenStream?.getTracks().forEach(t => t.stop()); screenStream = null; $('screen').style.display = 'none'; $('bScreen').classList.remove('on'); return; }
+    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: true });
+    $('screen').srcObject = screenStream; $('screen').muted = true; $('screen').style.display = 'block';
+    const list = [{ track: screenStream.getVideoTracks()[0], label: 'screen' }]; const a = screenStream.getAudioTracks()[0]; if (a) list.push({ track: a, label: 'screen-audio' });
+    await publishGroup('screen', list); $('bScreen').classList.add('on');
+    screenStream.getVideoTracks()[0].onended = () => { if (hostGroups.has('screen')) $('bScreen').onclick(); };
+  } catch (e) { log(`screen: ${e.message}`); }
+};
+let camStream = null, screenStream = null;
+
+// viewer side: one connection per host session
+const viewerConns = new Map();   // hostSessionId -> { pc, sessionId, midName: Map(mid -> trackName), pulled: Set(trackName), attempts }
+const camOut = new MediaStream(), screenOut = new MediaStream();
+const shown = new Map();         // label -> track shown in a tile
+async function pullTracks(ht) {
+  if (me.role !== 'viewer' || !me.realtime || !ht) return;
+  const wantedSessions = new Set(ht.tracks.map(t => t.sessionId));
+  for (const [hs, c] of viewerConns) if (!wantedSessions.has(hs)) dropConn(hs);   // host stopped that group
+  for (const hs of wantedSessions) {
+    const names = ht.tracks.filter(t => t.sessionId === hs);
+    let c = viewerConns.get(hs);
+    try {
+      if (!c) { const conn = await newConn(); c = { pc: conn.pc, sessionId: conn.sessionId, midName: new Map(), pulled: new Set(), attempts: 0 }; conn.pc.ontrack = (e) => onRemoteTrack(c, e); viewerConns.set(hs, c); }
+      const want = names.filter(t => !c.pulled.has(t.trackName));
+      if (!want.length) { reconcile(); continue; }
+      const r = await api('POST', P('/rtc/pull'), { sessionId: c.sessionId, tracks: want.map(t => ({ sessionId: hs, trackName: t.trackName })) }, auth());
+      if (r.status !== 200) { log(`pull ${r.status} ${r.body.error || ''}`); continue; }
+      const failed = [];
+      (r.body.tracks || []).forEach(t => { if (t.errorCode || t.error) failed.push(t); else if (t.mid) { c.midName.set(t.mid, t.trackName); c.pulled.add(t.trackName); const k = names.find(n => n.trackName === t.trackName); if (k?.kind === 'video') layerState.set(`${hs}/${t.trackName}`, { hs, trackName: t.trackName, mid: t.mid, conn: c, rid: 'a', cleanSince: performance.now(), lastLost: 0, lastRecv: 0 }); } });
+      if (r.body.requiresImmediateRenegotiation) {
+        await c.pc.setRemoteDescription(r.body.sessionDescription);
+        const ans = await c.pc.createAnswer(); await c.pc.setLocalDescription(ans);
+        const rr = await api('PUT', P('/rtc/renegotiate'), { sessionId: c.sessionId, answer: { type: 'answer', sdp: c.pc.localDescription.sdp } }, auth());
+        if (rr.status !== 200) log(`renegotiate ${rr.status} ${JSON.stringify(rr.body).slice(0, 200)}`);
+      }
+      const ok = want.filter(t => !failed.some(f => f.trackName === t.trackName));
+      if (ok.length) log(`pulling ${ok.map(t => labelOf(t.trackName)).join(', ')} from host session ${hs.slice(0, 8)}…`);
+      // empty_track_error: the host's packets have not reached the SFU yet (announce races the first packets). Retry with backoff.
+      if (failed.length && c.attempts < 8) { const wait = 800 + 700 * c.attempts++; log(`pull: ${failed.map(f => labelOf(f.trackName)).join(', ')} not flowing yet (${failed[0].errorCode}); retry in ${wait} ms`); setTimeout(() => pullTracks(hostTracks), wait); }
+      else if (failed.length) log(`pull: giving up on ${failed.map(f => labelOf(f.trackName)).join(', ')}`);
+      reconcile();
+    } catch (e) { log(`pull failed: ${e.message}`); }
+  }
+}
+function dropConn(hs) { const c = viewerConns.get(hs); if (!c) return; viewerConns.delete(hs); for (const k of [...layerState.keys()]) if (k.startsWith(hs + '/')) layerState.delete(k); for (const name of c.midName.values()) hideTile(labelOf(name)); try { c.pc.close(); } catch {} log(`host session ${hs.slice(0, 8)}… gone, connection closed`); }
+function clearRemote() { for (const hs of [...viewerConns.keys()]) dropConn(hs); }
+function reconcile() {   // attach whatever the live connections receive; the track event alone is not always fired
+  for (const c of viewerConns.values()) for (const tr of c.pc.getTransceivers()) {
+    const name = c.midName.get(tr.mid); if (!name || !tr.receiver?.track) continue;
+    if (tr.currentDirection && !tr.currentDirection.includes('recv')) continue;
+    attachRemote(labelOf(name), tr.receiver.track);
+  }
+}
+const tileOf = (label) => label.startsWith('screen') ? { out: screenOut, el: $('screen') } : { out: camOut, el: $('cam') };
+function attachRemote(label, track) {
+  if (shown.get(label) === track && track.readyState === 'live') return;
+  shown.set(label, track);
+  const { out, el } = tileOf(label);
+  out.getTracks().filter(t => t.kind === track.kind).forEach(t => out.removeTrack(t)); out.addTrack(track);
+  el.srcObject = out; el.style.display = 'block'; el.style.opacity = 1; el.muted = false; el.play().catch(() => {});
+  track.onended = () => { if (shown.get(label) === track) hideTile(label); };
+  log(`receiving ${label} (${track.kind})`);
+}
+function hideTile(label) { const { out, el } = tileOf(label); const t = shown.get(label); if (t) { out.removeTrack(t); shown.delete(label); } if (!out.getTracks().length) el.style.display = 'none'; }
+function onRemoteTrack(c, e) { attachRemote(labelOf(c.midName.get(e.transceiver.mid) || e.track.kind), e.track); }
+// ---- simulcast layer control (viewer) ---------------------------------------------------------------------------
+// The SFU already steps a viewer down when bandwidth is short (priorityOrdering asciibetical). This loop makes the
+// preference follow reality: >5% packet loss over 10 s -> ask one layer lower; 30 s clean -> ask one layer higher.
+const layerState = new Map();   // `${hostSession}/${trackName}` -> { hs, trackName, mid, conn, rid, cleanSince, lastLost, lastRecv }
+const RIDS = ['a', 'b', 'c'];
+async function setLayer(st, rid, why) {
+  if (rid === st.rid) return;
+  const r = await api('PUT', P('/rtc/layer'), { sessionId: st.conn.sessionId, mid: st.mid, hostSessionId: st.hs, trackName: st.trackName, rid }, auth());
+  if (r.status === 200) { st.rid = rid; st.cleanSince = performance.now(); log(`host ${labelOf(st.trackName)} layer -> ${rid} (${why})`); }
+  else log(`layer change refused ${r.status} ${r.body.error || JSON.stringify(r.body).slice(0, 120)}`);
+}
+window.forceLayer = (rid) => { for (const st of layerState.values()) setLayer(st, rid, 'manual'); };   // console/test hook
+async function layerTick() {
+  for (const st of layerState.values()) {
+    if (st.conn.pc.connectionState !== 'connected') continue;
+    const stats = await st.conn.pc.getStats(); let lost = 0, recv = 0, w = 0;
+    stats.forEach(r => { if (r.type === 'inbound-rtp' && r.kind === 'video' && (r.mid === st.mid || r.mid == null)) { lost += r.packetsLost || 0; recv += r.packetsReceived || 0; w = r.frameWidth || w; } });
+    const dl = lost - st.lastLost, dr = recv - st.lastRecv; st.lastLost = lost; st.lastRecv = recv;
+    const lossPct = dr + dl > 0 ? 100 * dl / (dr + dl) : 0;
+    $('res').title = `host tile ${w}px wide, layer ${st.rid}, loss ${lossPct.toFixed(1)}%`;
+    const i = RIDS.indexOf(st.rid);
+    if (lossPct > 5 && i < RIDS.length - 1) { await setLayer(st, RIDS[i + 1], `${lossPct.toFixed(0)}% loss`); continue; }
+    if (lossPct > 1) st.cleanSince = performance.now();
+    if (i > 0 && performance.now() - st.cleanSince > 30_000) await setLayer(st, RIDS[i - 1], 'clean for 30 s');
+  }
+}
+setInterval(layerTick, 10_000);
+async function statsTick() {
+  let bytes = 0;
+  for (const pc of allPcs()) { if (pc.connectionState === 'closed') continue; const st = await pc.getStats(); st.forEach(r => { if ((r.type === 'outbound-rtp' || r.type === 'inbound-rtp') && !r.isRemote) bytes += r.bytesSent ?? r.bytesReceived ?? 0; }); }
+  const now = performance.now(); if (statsTick.last) $('kbps').textContent = `${Math.max(0, (bytes - statsTick.lastBytes) * 8 / ((now - statsTick.last) / 1000) / 1000).toFixed(0)} kbps`; statsTick.last = now; statsTick.lastBytes = bytes;
+}
+setInterval(statsTick, 3000);
+
+// ---- security checks (host) ----------------------------------------------------------------------------------
+$('bChecks').onclick = async () => {
+  const set = (id, ok, detail) => { $(id).innerHTML = `<span class="${ok ? 'ok' : 'no'}">${ok ? 'PASS' : 'FAIL'}</span> ${detail}`; };
+  ['c1','c2','c3','c4','c5','c6'].forEach(id => $(id).textContent = '…');
+  const probe = 'probe-' + Math.random().toString(36).slice(2, 8); log(`checks: probe viewer ${probe}`);
+  let r = await api('POST', P('/join'), { userId: probe, deviceId: 'probe' }); set('c1', r.status === 402, `${r.status} "${r.body.error || ''}"`);
+  await api('POST', P('/ticket'), { userId: probe });
+  r = await api('POST', P('/join'), { userId: probe, deviceId: 'probe' }); if (r.status !== 200) { ['c2','c3','c4','c5','c6'].forEach(id => set(id, false, `probe could not join: ${r.status}`)); return; }
+  const pt = r.body;
+  // c2 + c5 over the probe's own socket
+  const sock = new WebSocket(pt.ws); const got = []; let closeCode = null;
+  await new Promise((res) => { sock.onopen = res; sock.onclose = (e) => { closeCode = e.code; }; sock.onmessage = (e) => { try { got.push(JSON.parse(e.data)); } catch {} }; });
+  const before = clock ? { ...clock } : null;
+  sock.send(JSON.stringify({ t: 'clock', state: 'playing', position: 9999 }));
+  for (let i = 0; i < 4; i++) sock.send(JSON.stringify({ t: 'chat', text: `probe burst ${i}` }));
+  await new Promise(r => setTimeout(r, 1200));
+  const forb = got.find(m => m.t === 'error' && m.code === 'forbidden'); const moved = clock && clock.position === 9999;
+  set('c2', !!forb && !moved, forb ? `refused (${forb.detail}); clock ${moved ? 'MOVED' : 'unchanged'}` : 'no refusal received');
+  const rateErr = got.filter(m => m.t === 'error' && m.code === 'rate').length, accepted = got.filter(m => m.t === 'chat' && m.msg.userId === probe).length;
+  set('c5', accepted <= 1 && rateErr >= 3, `${accepted} accepted, ${rateErr} refused of 4 in a burst`);
+  r = await api('POST', P('/rtc/publish'), { sessionId: 'x', offer: { type: 'offer', sdp: 'v=0' }, tracks: [{ mid: '0', trackName: 'cam', kind: 'video' }] }, { Authorization: 'Bearer ' + pt.token }); set('c3', r.status === 403, `${r.status} "${r.body.error || ''}"`);
+  const other = await fetch(`/media/not-this-film/v1/url/master.m3u8?t=${pt.token}`); const own = await fetch(pt.hls); set('c4', other.status === 401 && own.status === 200, `other film ${other.status}, own film ${own.status}`);
+  wsSend({ t: 'kick', userId: probe }); await new Promise(r => setTimeout(r, 1500));
+  r = await api('POST', P('/join'), { userId: probe, deviceId: 'probe' }); set('c6', closeCode === 4001 && r.status === 403, `socket closed ${closeCode ?? 'not yet'}, rejoin ${r.status}`);
+  log('checks done');
+};
+
+// ---- boot -------------------------------------------------------------------------------------------------
+(async () => {
+  await loadFilms();
+  let saved = null; try { saved = localStorage.getItem('ztor-party-user'); } catch {}
+  if (q.get('user')) { $('jUser').value = q.get('user'); $('hUser').value = q.get('user'); } else if (saved) $('jUser').value = saved;
+  if (q.get('party')) { $('jParty').value = q.get('party'); await partyInfo(); if (q.get('user')) join(q.get('party'), q.get('user')); }
+})();
+</script>
+</body>
+</html>

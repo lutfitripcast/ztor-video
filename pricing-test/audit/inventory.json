@@ -1,0 +1,290 @@
+{
+ "SPL2": {
+  "version": 5,
+  "duration_s": 73.208336,
+  "objects": 77,
+  "bytes": 99544716,
+  "per_rendition": {
+   "video_1080p": {
+    "objects": 14,
+    "bytes": 52248860
+   },
+   "video_360p": {
+    "objects": 14,
+    "bytes": 6966281
+   },
+   "video_480p": {
+    "objects": 14,
+    "bytes": 13035776
+   },
+   "video_720p": {
+    "objects": 14,
+    "bytes": 26066572
+   },
+   "audio": {
+    "objects": 14,
+    "bytes": 1208200
+   }
+  },
+  "bad": [],
+  "reps": [
+   {
+    "id": "0",
+    "height": "1080",
+    "bw_attr": 7325999,
+    "codecs": "avc1.640028",
+    "n": 13,
+    "start": 1,
+    "media": "video_1080p/$Number$.m4s",
+    "init": "video_1080p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "1",
+    "height": "360",
+    "bw_attr": 966970,
+    "codecs": "avc1.64001e",
+    "n": 13,
+    "start": 1,
+    "media": "video_360p/$Number$.m4s",
+    "init": "video_360p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "2",
+    "height": "480",
+    "bw_attr": 1823690,
+    "codecs": "avc1.64001e",
+    "n": 13,
+    "start": 1,
+    "media": "video_480p/$Number$.m4s",
+    "init": "video_480p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "3",
+    "height": "720",
+    "bw_attr": 3697120,
+    "codecs": "avc1.64001f",
+    "n": 13,
+    "start": 1,
+    "media": "video_720p/$Number$.m4s",
+    "init": "video_720p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "4",
+    "height": null,
+    "bw_attr": 133183,
+    "codecs": "mp4a.40.2",
+    "n": 13,
+    "start": 1,
+    "media": "audio/$Number$.m4s",
+    "init": "audio/init.mp4",
+    "ctype": "audio"
+   }
+  ]
+ },
+ "VULG4K": {
+  "version": 9,
+  "duration_s": 122.083336,
+  "objects": 140,
+  "bytes": 398955333,
+  "per_rendition": {
+   "video_1080p": {
+    "objects": 22,
+    "bytes": 87091404
+   },
+   "video_360p": {
+    "objects": 22,
+    "bytes": 11710222
+   },
+   "video_480p": {
+    "objects": 22,
+    "bytes": 21871325
+   },
+   "video_720p": {
+    "objects": 22,
+    "bytes": 43717156
+   },
+   "video_2160p": {
+    "objects": 22,
+    "bytes": 232521053
+   },
+   "audio": {
+    "objects": 22,
+    "bytes": 2017866
+   }
+  },
+  "bad": [],
+  "reps": [
+   {
+    "id": "0",
+    "height": "1080",
+    "bw_attr": 6941815,
+    "codecs": "avc1.640028",
+    "n": 21,
+    "start": 1,
+    "media": "video_1080p/$Number$.m4s",
+    "init": "video_1080p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "2",
+    "height": "360",
+    "bw_attr": 930819,
+    "codecs": "avc1.64001e",
+    "n": 21,
+    "start": 1,
+    "media": "video_360p/$Number$.m4s",
+    "init": "video_360p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "3",
+    "height": "480",
+    "bw_attr": 1756118,
+    "codecs": "avc1.64001e",
+    "n": 21,
+    "start": 1,
+    "media": "video_480p/$Number$.m4s",
+    "init": "video_480p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "4",
+    "height": "720",
+    "bw_attr": 3475640,
+    "codecs": "avc1.64001f",
+    "n": 21,
+    "start": 1,
+    "media": "video_720p/$Number$.m4s",
+    "init": "video_720p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "1",
+    "height": "2160",
+    "bw_attr": 18123092,
+    "codecs": "avc1.640033",
+    "n": 21,
+    "start": 1,
+    "media": "video_2160p/$Number$.m4s",
+    "init": "video_2160p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "5",
+    "height": null,
+    "bw_attr": 139103,
+    "codecs": "mp4a.40.2",
+    "n": 21,
+    "start": 1,
+    "media": "audio/$Number$.m4s",
+    "init": "audio/init.mp4",
+    "ctype": "audio"
+   }
+  ]
+ },
+ "X9": {
+  "version": 1,
+  "duration_s": 1099.166626,
+  "objects": 1118,
+  "bytes": 3663775157,
+  "per_rendition": {
+   "video_1080p": {
+    "objects": 185,
+    "bytes": 799393614
+   },
+   "video_360p": {
+    "objects": 185,
+    "bytes": 108245479
+   },
+   "video_480p": {
+    "objects": 185,
+    "bytes": 201978405
+   },
+   "video_720p": {
+    "objects": 185,
+    "bytes": 402365018
+   },
+   "video_2160p": {
+    "objects": 185,
+    "bytes": 2133185587
+   },
+   "audio": {
+    "objects": 185,
+    "bytes": 18541475
+   }
+  },
+  "bad": [],
+  "reps": [
+   {
+    "id": "0",
+    "height": "1080",
+    "bw_attr": 7298723,
+    "codecs": "avc1.640028",
+    "n": 184,
+    "start": 1,
+    "media": "video_1080p/$Number$.m4s",
+    "init": "video_1080p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "2",
+    "height": "360",
+    "bw_attr": 994672,
+    "codecs": "avc1.64001e",
+    "n": 184,
+    "start": 1,
+    "media": "video_360p/$Number$.m4s",
+    "init": "video_360p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "3",
+    "height": "480",
+    "bw_attr": 1848639,
+    "codecs": "avc1.64001e",
+    "n": 184,
+    "start": 1,
+    "media": "video_480p/$Number$.m4s",
+    "init": "video_480p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "4",
+    "height": "720",
+    "bw_attr": 3647444,
+    "codecs": "avc1.64001f",
+    "n": 184,
+    "start": 1,
+    "media": "video_720p/$Number$.m4s",
+    "init": "video_720p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "1",
+    "height": "2160",
+    "bw_attr": 19143924,
+    "codecs": "avc1.640033",
+    "n": 184,
+    "start": 1,
+    "media": "video_2160p/$Number$.m4s",
+    "init": "video_2160p/init.mp4",
+    "ctype": "video"
+   },
+   {
+    "id": "5",
+    "height": null,
+    "bw_attr": 142438,
+    "codecs": "mp4a.40.2",
+    "n": 184,
+    "start": 1,
+    "media": "audio/$Number$.m4s",
+    "init": "audio/init.mp4",
+    "ctype": "audio"
+   }
+  ]
+ }
+}

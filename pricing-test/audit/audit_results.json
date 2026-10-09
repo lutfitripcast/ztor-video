@@ -1,0 +1,1572 @@
+{
+ "probe": "audit-4avw0f",
+ "checks": [
+  {
+   "check": "step2.masters_s3_unauth",
+   "ok": true,
+   "detail": "S3 endpoint list without credentials -> 400"
+  },
+  {
+   "check": "step2.ztor-masters_r2dev_disabled",
+   "ok": false,
+   "detail": "pub-74c116aa49a545e58268000f8c5a9dab.r2.dev -> 401 (managed domain enabled:false per API)"
+  },
+  {
+   "check": "step2.ztor-streams_r2dev_disabled",
+   "ok": false,
+   "detail": "pub-ac5cf0e43de947b5a6369951cbdafe94.r2.dev -> 401 (managed domain enabled:false per API)"
+  },
+  {
+   "check": "step2.masters_not_via_worker",
+   "ok": true,
+   "detail": "Worker has no masters route -> 404"
+  },
+  {
+   "check": "SPL2.step7.402_without_rental",
+   "ok": true,
+   "detail": "402 {'error': 'Rent this film to watch it.'}"
+  },
+  {
+   "check": "SPL2.step7.401_without_login",
+   "ok": true,
+   "detail": "401"
+  },
+  {
+   "check": "SPL2.step7.pass_4h",
+   "ok": true,
+   "detail": "exp-iat=14400s claims={'sub': 'audit-4avw0f', 'filmId': '439662d9-e97b-44f5-9ae1-7bd346553e4b', 'deviceId': 'audit', 'uhd': False}"
+  },
+  {
+   "check": "SPL2.step7.links_and_policy",
+   "ok": true,
+   "detail": "policy no-hdcp={'rentalWindowH': 48, 'offline': False, 'maxHeight': 1080, 'reason': 'no HDCP: this device plays up to 1080p'} vendor=axinom (Widevine / PlayReady / FairPlay)"
+  },
+  {
+   "check": "SPL2.step7.mpd_401_no_pass",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "SPL2.step7.mpd_401_forged",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "SPL2.step7.mpd_401_tampered_claims",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "SPL2.step7.mpd_401_other_film_pass",
+   "ok": true,
+   "detail": "pass for 439662d9 on ae60bf2f -> 401"
+  },
+  {
+   "check": "SPL2.step7.mpd_200_header_pass",
+   "ok": true,
+   "detail": "200 cache-control=private, max-age=60 ct=application/dash+xml"
+  },
+  {
+   "check": "SPL2.step7.mpd_200_query_pass",
+   "ok": true,
+   "detail": 200
+  },
+  {
+   "check": "SPL2.step8.hls_master_policy_filter",
+   "ok": true,
+   "detail": "variants no-hdcp=['1920x1080', '640x360', '853x480', '1280x720'] hdcp=['1920x1080', '640x360', '853x480', '1280x720'] pass_in_uris=True cc=private, no-store"
+  },
+  {
+   "check": "SPL2.step7.media_playlist_401_no_pass",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "SPL2.step5.hls_key_signalling",
+   "ok": true,
+   "detail": "keyformats=['com.apple.streamingkeydelivery', 'com.microsoft.playready', 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed'] skd_kids_match_D1=True iv_present=True n_skd=2"
+  },
+  {
+   "check": "SPL2.step5.dash_ladder",
+   "ok": true,
+   "detail": "peak(@bandwidth)>=target={1080: True, 720: True, 480: True, 360: True} type=static dur=PT73.208336S heights=[1080, 720, 480, 360] kbps={1080: 7326, 720: 3697, 480: 1824, 360: 967} segdur={6.0, 6.016}"
+  },
+  {
+   "check": "SPL2.step6.dash_kids_match_d1",
+   "ok": true,
+   "detail": "mpd_kids=['487dd9cef63eb9e89d8fdeefbee25117', 'f48ea1b553a95225913efc4a03afecdf'] d1=['487dd9cef63eb9e89d8fdeefbee25117', 'f48ea1b553a95225913efc4a03afecdf']"
+  },
+  {
+   "check": "SPL2.step5.dash_drm_signalling",
+   "ok": true,
+   "detail": "scheme={'cbcs'} systems=['9a04f079', 'edef8ba9']"
+  },
+  {
+   "check": "SPL2.step7.segments_public_immutable",
+   "ok": true,
+   "detail": {
+    "video_360p": "public, max-age=31536000, immutable",
+    "video_1080p": "public, max-age=31536000, immutable",
+    "audio": "public, max-age=31536000, immutable"
+   }
+  },
+  {
+   "check": "SPL2.step5.clear_lead_0_all_segments_encrypted",
+   "ok": true,
+   "detail": {
+    "video_360p": [
+     true,
+     true,
+     true
+    ],
+    "video_1080p": [
+     true,
+     true,
+     true
+    ],
+    "audio": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  {
+   "check": "SPL2.step5.init_scheme_and_kid",
+   "ok": true,
+   "detail": {
+    "video_360p": [
+     "cbcs",
+     "f48ea1b5"
+    ],
+    "video_1080p": [
+     "cbcs",
+     "f48ea1b5"
+    ],
+    "audio": [
+     "cbcs",
+     "487dd9ce"
+    ]
+   }
+  },
+  {
+   "check": "SPL2.step7.segment_head_ranges",
+   "ok": true,
+   "detail": "HEAD 200 accept-ranges=bytes len=604179"
+  },
+  {
+   "check": "SPL2.step8.license_401_no_pass",
+   "ok": true,
+   "detail": "401 {'error': 'valid play token required'}"
+  },
+  {
+   "check": "SPL2.step8.clearkey_closed_410",
+   "ok": true,
+   "detail": "410 {'error': 'ClearKey is disabled while a DRM vendor is configured'}"
+  },
+  {
+   "check": "SPL2.step8.fairplay_cert",
+   "ok": true,
+   "detail": "200 1242 bytes cc=public, max-age=3600"
+  },
+  {
+   "check": "SPL2.step8.entitlement_policy",
+   "ok": true,
+   "detail": "expiry==rental_expiry=True persistence=False UHD={'name': 'UHD', 'widevine': {'device_security_level': 'HW_SECURE_ALL', 'hdcp': '2.2'}, 'playready': {'min_device_security_level': 3000}, 'fairplay': {'hdcp': 'TYPE1', 'allow_airplay': False, 'allow_av_adapter': False}}"
+  },
+  {
+   "check": "SPL2.step8.uhd_key_only_with_hdcp",
+   "ok": true,
+   "detail": "keys no-hdcp=2 hdcp=3"
+  },
+  {
+   "check": "VULG4K.step7.402_without_rental",
+   "ok": true,
+   "detail": "402 {'error': 'Rent this film to watch it.'}"
+  },
+  {
+   "check": "VULG4K.step7.401_without_login",
+   "ok": true,
+   "detail": "401"
+  },
+  {
+   "check": "VULG4K.step7.pass_4h",
+   "ok": true,
+   "detail": "exp-iat=14400s claims={'sub': 'audit-4avw0f', 'filmId': 'ae60bf2f-5bd1-44cc-838b-d60e4594b98d', 'deviceId': 'audit', 'uhd': False}"
+  },
+  {
+   "check": "VULG4K.step7.links_and_policy",
+   "ok": true,
+   "detail": "policy no-hdcp={'rentalWindowH': 48, 'offline': False, 'maxHeight': 1080, 'reason': 'no HDCP: this device plays up to 1080p'} vendor=axinom (Widevine / PlayReady / FairPlay)"
+  },
+  {
+   "check": "VULG4K.step7.mpd_401_no_pass",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "VULG4K.step7.mpd_401_forged",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "VULG4K.step7.mpd_401_tampered_claims",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "VULG4K.step7.mpd_401_other_film_pass",
+   "ok": true,
+   "detail": "pass for ae60bf2f on 439662d9 -> 401"
+  },
+  {
+   "check": "VULG4K.step7.mpd_200_header_pass",
+   "ok": true,
+   "detail": "200 cache-control=private, max-age=60 ct=application/dash+xml"
+  },
+  {
+   "check": "VULG4K.step7.mpd_200_query_pass",
+   "ok": true,
+   "detail": 200
+  },
+  {
+   "check": "VULG4K.step8.hls_master_policy_filter",
+   "ok": true,
+   "detail": "variants no-hdcp=['1920x1080', '640x360', '853x480', '1280x720'] hdcp=['1920x1080', '3840x2160', '640x360', '853x480', '1280x720'] pass_in_uris=True cc=private, no-store"
+  },
+  {
+   "check": "VULG4K.step7.media_playlist_401_no_pass",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "VULG4K.step5.hls_key_signalling",
+   "ok": true,
+   "detail": "keyformats=['com.apple.streamingkeydelivery', 'com.microsoft.playready', 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed'] skd_kids_match_D1=True iv_present=True n_skd=3"
+  },
+  {
+   "check": "VULG4K.step5.dash_ladder",
+   "ok": true,
+   "detail": "peak(@bandwidth)>=target={2160: True, 1080: True, 720: True, 480: True, 360: True} type=static dur=PT122.083336S heights=[2160, 1080, 720, 480, 360] kbps={2160: 18123, 1080: 6942, 720: 3476, 480: 1756, 360: 931} segdur={6.0, 6.013968253968254}"
+  },
+  {
+   "check": "VULG4K.step6.dash_kids_match_d1",
+   "ok": true,
+   "detail": "mpd_kids=['1d39b33d9f9cec196b0cdf699fae936f', 'd30be75e1e2d49d6fcd2a55a1ce49fa5', 'e0ef5085994c2071bd9c524e510d33f7'] d1=['1d39b33d9f9cec196b0cdf699fae936f', 'd30be75e1e2d49d6fcd2a55a1ce49fa5', 'e0ef5085994c2071bd9c524e510d33f7']"
+  },
+  {
+   "check": "VULG4K.step5.dash_drm_signalling",
+   "ok": true,
+   "detail": "scheme={'cbcs'} systems=['9a04f079', 'edef8ba9']"
+  },
+  {
+   "check": "VULG4K.step7.segments_public_immutable",
+   "ok": true,
+   "detail": {
+    "video_360p": "public, max-age=31536000, immutable",
+    "video_1080p": "public, max-age=31536000, immutable",
+    "video_2160p": "public, max-age=31536000, immutable",
+    "audio": "public, max-age=31536000, immutable"
+   }
+  },
+  {
+   "check": "VULG4K.step5.clear_lead_0_all_segments_encrypted",
+   "ok": true,
+   "detail": {
+    "video_360p": [
+     true,
+     true,
+     true
+    ],
+    "video_1080p": [
+     true,
+     true,
+     true
+    ],
+    "video_2160p": [
+     true,
+     true,
+     true
+    ],
+    "audio": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  {
+   "check": "VULG4K.step5.init_scheme_and_kid",
+   "ok": true,
+   "detail": {
+    "video_360p": [
+     "cbcs",
+     "1d39b33d"
+    ],
+    "video_1080p": [
+     "cbcs",
+     "1d39b33d"
+    ],
+    "video_2160p": [
+     "cbcs",
+     "d30be75e"
+    ],
+    "audio": [
+     "cbcs",
+     "e0ef5085"
+    ]
+   }
+  },
+  {
+   "check": "VULG4K.step7.segment_head_ranges",
+   "ok": true,
+   "detail": "HEAD 200 accept-ranges=bytes len=562098"
+  },
+  {
+   "check": "VULG4K.step8.license_401_no_pass",
+   "ok": true,
+   "detail": "401 {'error': 'valid play token required'}"
+  },
+  {
+   "check": "VULG4K.step8.clearkey_closed_410",
+   "ok": true,
+   "detail": "410 {'error': 'ClearKey is disabled while a DRM vendor is configured'}"
+  },
+  {
+   "check": "VULG4K.step8.fairplay_cert",
+   "ok": true,
+   "detail": "200 1242 bytes cc=public, max-age=3600"
+  },
+  {
+   "check": "VULG4K.step8.entitlement_policy",
+   "ok": true,
+   "detail": "expiry==rental_expiry=True persistence=False UHD={'name': 'UHD', 'widevine': {'device_security_level': 'HW_SECURE_ALL', 'hdcp': '2.2'}, 'playready': {'min_device_security_level': 3000}, 'fairplay': {'hdcp': 'TYPE1', 'allow_airplay': False, 'allow_av_adapter': False}}"
+  },
+  {
+   "check": "VULG4K.step8.uhd_key_only_with_hdcp",
+   "ok": true,
+   "detail": "keys no-hdcp=2 hdcp=3"
+  },
+  {
+   "check": "X9.step7.402_without_rental",
+   "ok": true,
+   "detail": "402 {'error': 'Rent this film to watch it.'}"
+  },
+  {
+   "check": "X9.step7.401_without_login",
+   "ok": true,
+   "detail": "401"
+  },
+  {
+   "check": "X9.step7.pass_4h",
+   "ok": true,
+   "detail": "exp-iat=14400s claims={'sub': 'audit-4avw0f', 'filmId': 'becd8657-a8c0-4502-838d-527cb533d166', 'deviceId': 'audit', 'uhd': False}"
+  },
+  {
+   "check": "X9.step7.links_and_policy",
+   "ok": true,
+   "detail": "policy no-hdcp={'rentalWindowH': 48, 'offline': False, 'maxHeight': 1080, 'reason': 'no HDCP: this device plays up to 1080p'} vendor=axinom (Widevine / PlayReady / FairPlay)"
+  },
+  {
+   "check": "X9.step7.mpd_401_no_pass",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "X9.step7.mpd_401_forged",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "X9.step7.mpd_401_tampered_claims",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "X9.step7.mpd_401_other_film_pass",
+   "ok": true,
+   "detail": "pass for becd8657 on 439662d9 -> 401"
+  },
+  {
+   "check": "X9.step7.mpd_200_header_pass",
+   "ok": true,
+   "detail": "200 cache-control=private, max-age=60 ct=application/dash+xml"
+  },
+  {
+   "check": "X9.step7.mpd_200_query_pass",
+   "ok": true,
+   "detail": 200
+  },
+  {
+   "check": "X9.step8.hls_master_policy_filter",
+   "ok": true,
+   "detail": "variants no-hdcp=['1920x1080', '640x360', '853x480', '1280x720'] hdcp=['1920x1080', '3840x2160', '640x360', '853x480', '1280x720'] pass_in_uris=True cc=private, no-store"
+  },
+  {
+   "check": "X9.step7.media_playlist_401_no_pass",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "X9.step5.hls_key_signalling",
+   "ok": false,
+   "detail": "keyformats=['com.apple.streamingkeydelivery', 'com.microsoft.playready', 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed'] skd_kids_match_D1=False iv_present=False n_skd=1"
+  },
+  {
+   "check": "X9.step5.dash_ladder",
+   "ok": true,
+   "detail": "peak(@bandwidth)>=target={2160: True, 1080: True, 720: True, 480: True, 360: True} type=static dur=PT1099.166626S heights=[2160, 1080, 720, 480, 360] kbps={2160: 19144, 1080: 7299, 720: 3647, 480: 1849, 360: 995} segdur={6.0, 6.014013605442177}"
+  },
+  {
+   "check": "X9.step6.dash_kids_match_d1",
+   "ok": true,
+   "detail": "mpd_kids=['596395fba95b3f3cb1ca7a9f80b85f05', 'e3a226ab5be290a0715c928d23ac5d5e', 'f9f3c7611e9acf8dc277a37ba76e0979'] d1=['596395fba95b3f3cb1ca7a9f80b85f05', 'e3a226ab5be290a0715c928d23ac5d5e', 'f9f3c7611e9acf8dc277a37ba76e0979']"
+  },
+  {
+   "check": "X9.step5.dash_drm_signalling",
+   "ok": true,
+   "detail": "scheme={'cenc'} systems=['1077efec', '9a04f079', 'edef8ba9']"
+  },
+  {
+   "check": "X9.step7.segments_public_immutable",
+   "ok": true,
+   "detail": {
+    "video_360p": "public, max-age=31536000, immutable",
+    "video_1080p": "public, max-age=31536000, immutable",
+    "video_2160p": "public, max-age=31536000, immutable",
+    "audio": "public, max-age=31536000, immutable"
+   }
+  },
+  {
+   "check": "X9.step5.clear_lead_0_all_segments_encrypted",
+   "ok": true,
+   "detail": {
+    "video_360p": [
+     true,
+     true,
+     true
+    ],
+    "video_1080p": [
+     true,
+     true,
+     true
+    ],
+    "video_2160p": [
+     true,
+     true,
+     true
+    ],
+    "audio": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  {
+   "check": "X9.step5.init_scheme_and_kid",
+   "ok": true,
+   "detail": {
+    "video_360p": [
+     "cenc",
+     "f9f3c761"
+    ],
+    "video_1080p": [
+     "cenc",
+     "f9f3c761"
+    ],
+    "video_2160p": [
+     "cenc",
+     "596395fb"
+    ],
+    "audio": [
+     "cenc",
+     "e3a226ab"
+    ]
+   }
+  },
+  {
+   "check": "X9.step7.segment_head_ranges",
+   "ok": true,
+   "detail": "HEAD 200 accept-ranges=bytes len=563250"
+  },
+  {
+   "check": "X9.step8.license_401_no_pass",
+   "ok": true,
+   "detail": "401 {'error': 'valid play token required'}"
+  },
+  {
+   "check": "X9.step8.clearkey_closed_410",
+   "ok": true,
+   "detail": "410 {'error': 'ClearKey is disabled while a DRM vendor is configured'}"
+  },
+  {
+   "check": "X9.step8.fairplay_cert",
+   "ok": true,
+   "detail": "200 1242 bytes cc=public, max-age=3600"
+  },
+  {
+   "check": "X9.step8.entitlement_policy",
+   "ok": true,
+   "detail": "expiry==rental_expiry=True persistence=False UHD={'name': 'UHD', 'widevine': {'device_security_level': 'HW_SECURE_ALL', 'hdcp': '2.2'}, 'playready': {'min_device_security_level': 3000}, 'fairplay': {'hdcp': 'TYPE1', 'allow_airplay': False, 'allow_av_adapter': False}}"
+  },
+  {
+   "check": "X9.step8.uhd_key_only_with_hdcp",
+   "ok": true,
+   "detail": "keys no-hdcp=2 hdcp=3"
+  },
+  {
+   "check": "step8.axinom_valid_vs_tampered",
+   "ok": true,
+   "detail": "valid -> 200 '<binary 706 bytes, HTTP 200>' | tampered -> 400 'Invalid DRM message. The provided JWT has an invalid signature.'"
+  },
+  {
+   "check": "admin.requires_runner_token",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "jobs.requires_runner_token",
+   "ok": true,
+   "detail": 401
+  },
+  {
+   "check": "EXPOSURE.test_rent_is_anonymous",
+   "ok": false,
+   "detail": "POST /test/rent granted a 48 h rental to any userId with no credential (TEST_MODE=true on the public Worker)"
+  },
+  {
+   "check": "EXPOSURE.test_drm_token_is_anonymous",
+   "ok": false,
+   "detail": "GET /test/drm-token/{film} returns a signed Axinom entitlement usable directly against the vendor with a real device (TEST_MODE=true)"
+  },
+  {
+   "check": "cleanup.probe_rentals_revoked",
+   "ok": true,
+   "detail": {
+    "active": false
+   }
+  }
+ ],
+ "films": {
+  "SPL2": {
+   "id": "439662d9-e97b-44f5-9ae1-7bd346553e4b",
+   "version": 5,
+   "rental_expires": "2026-09-23T08:56:21.911Z",
+   "policy": {
+    "nohdcp": {
+     "rentalWindowH": 48,
+     "offline": false,
+     "maxHeight": 1080,
+     "reason": "no HDCP: this device plays up to 1080p"
+    },
+    "hdcp": {
+     "rentalWindowH": 48,
+     "offline": false,
+     "maxHeight": 2160,
+     "reason": "HDCP claimed: 2160p key will be issued"
+    }
+   },
+   "mpd_cache_control": "private, max-age=60",
+   "hls_variants_hdcp": [
+    {
+     "res": "1920x1080",
+     "bw": 7459182,
+     "uri": "stream_1.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiI0Mzk2NjJkOS1lOTdiLTQ0ZjUtOWFlMS03YmQzNDY1NTNlNGIiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODA5ODUsImV4cCI6MTc4OTk5NTM4NX0.R8MBLuHBab2_ci-_3qYw3-YUcehUjHSLpnIPi5SJRq8"
+    },
+    {
+     "res": "640x360",
+     "bw": 1100153,
+     "uri": "stream_2.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiI0Mzk2NjJkOS1lOTdiLTQ0ZjUtOWFlMS03YmQzNDY1NTNlNGIiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODA5ODUsImV4cCI6MTc4OTk5NTM4NX0.R8MBLuHBab2_ci-_3qYw3-YUcehUjHSLpnIPi5SJRq8"
+    },
+    {
+     "res": "853x480",
+     "bw": 1956873,
+     "uri": "stream_3.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiI0Mzk2NjJkOS1lOTdiLTQ0ZjUtOWFlMS03YmQzNDY1NTNlNGIiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODA5ODUsImV4cCI6MTc4OTk5NTM4NX0.R8MBLuHBab2_ci-_3qYw3-YUcehUjHSLpnIPi5SJRq8"
+    },
+    {
+     "res": "1280x720",
+     "bw": 3830303,
+     "uri": "stream_4.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiI0Mzk2NjJkOS1lOTdiLTQ0ZjUtOWFlMS03YmQzNDY1NTNlNGIiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODA5ODUsImV4cCI6MTc4OTk5NTM4NX0.R8MBLuHBab2_ci-_3qYw3-YUcehUjHSLpnIPi5SJRq8"
+    }
+   ],
+   "hls_keylines": {
+    "stream_1.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;charset=UTF-16;base64,vgEAAAEAAQC0ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADMALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAFMAPgA8AEsASQBEACAAQQBMAEcASQBEAD0AIgBBAEUAUwBDAEIAQwAiACAAVgBBAEwAVQBFAD0AIgB0AGEARwBPADkASwBsAFQASgBWAEsAUgBQAHYAeABLAEEANgAvAHMAMwB3AD0APQAiAD4APAAvAEsASQBEAD4APAAvAEsASQBEAFMAPgA8AC8AUABSAE8AVABFAEMAVABJAE4ARgBPAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",IV=0xe01f1845e09e3408522ab9a5de509e25,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEEh92c72PrnonY/e777iURcSEPSOobVTqVIlkT78SgOv7N8SEKL0ys5tYvKx09TC5tHHLhFI88aJmwY=\",KEYID=0xf48ea1b553a95225913efc4a03afecdf,IV=0xe01f1845e09e3408522ab9a5de509e25,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"skd://f48ea1b5-53a9-5225-913e-fc4a03afecdf:e01f1845e09e3408522ab9a5de509e25\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_2.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;charset=UTF-16;base64,vgEAAAEAAQC0ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADMALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAFMAPgA8AEsASQBEACAAQQBMAEcASQBEAD0AIgBBAEUAUwBDAEIAQwAiACAAVgBBAEwAVQBFAD0AIgB0AGEARwBPADkASwBsAFQASgBWAEsAUgBQAHYAeABLAEEANgAvAHMAMwB3AD0APQAiAD4APAAvAEsASQBEAD4APAAvAEsASQBEAFMAPgA8AC8AUABSAE8AVABFAEMAVABJAE4ARgBPAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",IV=0xe01f1845e09e3408522ab9a5de509e25,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEEh92c72PrnonY/e777iURcSEPSOobVTqVIlkT78SgOv7N8SEKL0ys5tYvKx09TC5tHHLhFI88aJmwY=\",KEYID=0xf48ea1b553a95225913efc4a03afecdf,IV=0xe01f1845e09e3408522ab9a5de509e25,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"skd://f48ea1b5-53a9-5225-913e-fc4a03afecdf:e01f1845e09e3408522ab9a5de509e25\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_3.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;charset=UTF-16;base64,vgEAAAEAAQC0ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADMALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAFMAPgA8AEsASQBEACAAQQBMAEcASQBEAD0AIgBBAEUAUwBDAEIAQwAiACAAVgBBAEwAVQBFAD0AIgB0AGEARwBPADkASwBsAFQASgBWAEsAUgBQAHYAeABLAEEANgAvAHMAMwB3AD0APQAiAD4APAAvAEsASQBEAD4APAAvAEsASQBEAFMAPgA8AC8AUABSAE8AVABFAEMAVABJAE4ARgBPAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",IV=0xe01f1845e09e3408522ab9a5de509e25,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEEh92c72PrnonY/e777iURcSEPSOobVTqVIlkT78SgOv7N8SEKL0ys5tYvKx09TC5tHHLhFI88aJmwY=\",KEYID=0xf48ea1b553a95225913efc4a03afecdf,IV=0xe01f1845e09e3408522ab9a5de509e25,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"skd://f48ea1b5-53a9-5225-913e-fc4a03afecdf:e01f1845e09e3408522ab9a5de509e25\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_4.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;charset=UTF-16;base64,vgEAAAEAAQC0ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADMALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAFMAPgA8AEsASQBEACAAQQBMAEcASQBEAD0AIgBBAEUAUwBDAEIAQwAiACAAVgBBAEwAVQBFAD0AIgB0AGEARwBPADkASwBsAFQASgBWAEsAUgBQAHYAeABLAEEANgAvAHMAMwB3AD0APQAiAD4APAAvAEsASQBEAD4APAAvAEsASQBEAFMAPgA8AC8AUABSAE8AVABFAEMAVABJAE4ARgBPAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",IV=0xe01f1845e09e3408522ab9a5de509e25,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEEh92c72PrnonY/e777iURcSEPSOobVTqVIlkT78SgOv7N8SEKL0ys5tYvKx09TC5tHHLhFI88aJmwY=\",KEYID=0xf48ea1b553a95225913efc4a03afecdf,IV=0xe01f1845e09e3408522ab9a5de509e25,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"skd://f48ea1b5-53a9-5225-913e-fc4a03afecdf:e01f1845e09e3408522ab9a5de509e25\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_0.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;charset=UTF-16;base64,vgEAAAEAAQC0ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADMALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAFMAPgA8AEsASQBEACAAQQBMAEcASQBEAD0AIgBBAEUAUwBDAEIAQwAiACAAVgBBAEwAVQBFAD0AIgB6AHQAbAA5AFMARAA3ADIANgBMAG0AZABqADkANwB2AHYAdQBKAFIARgB3AD0APQAiAD4APAAvAEsASQBEAD4APAAvAEsASQBEAFMAPgA8AC8AUABSAE8AVABFAEMAVABJAE4ARgBPAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",IV=0xe01f1845e09e3408522ab9a5de509e25,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEEh92c72PrnonY/e777iURcSEPSOobVTqVIlkT78SgOv7N8SEKL0ys5tYvKx09TC5tHHLhFI88aJmwY=\",KEYID=0x487dd9cef63eb9e89d8fdeefbee25117,IV=0xe01f1845e09e3408522ab9a5de509e25,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"skd://487dd9ce-f63e-b9e8-9d8f-deefbee25117:e01f1845e09e3408522ab9a5de509e25\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ]
+   },
+   "mpd": {
+    "type": "static",
+    "duration": "PT73.208336S",
+    "reps": [
+     {
+      "type": "video",
+      "id": "0",
+      "height": "1080",
+      "bandwidth": 7325999,
+      "codecs": "avc1.640028",
+      "kid": "f48ea1b553a95225913efc4a03afecdf",
+      "schemes": [
+       "cbcs",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_1080p/$Number$.m4s",
+      "init": "video_1080p/init.mp4"
+     },
+     {
+      "type": "video",
+      "id": "1",
+      "height": "360",
+      "bandwidth": 966970,
+      "codecs": "avc1.64001e",
+      "kid": "f48ea1b553a95225913efc4a03afecdf",
+      "schemes": [
+       "cbcs",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_360p/$Number$.m4s",
+      "init": "video_360p/init.mp4"
+     },
+     {
+      "type": "video",
+      "id": "2",
+      "height": "480",
+      "bandwidth": 1823690,
+      "codecs": "avc1.64001e",
+      "kid": "f48ea1b553a95225913efc4a03afecdf",
+      "schemes": [
+       "cbcs",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_480p/$Number$.m4s",
+      "init": "video_480p/init.mp4"
+     },
+     {
+      "type": "video",
+      "id": "3",
+      "height": "720",
+      "bandwidth": 3697120,
+      "codecs": "avc1.64001f",
+      "kid": "f48ea1b553a95225913efc4a03afecdf",
+      "schemes": [
+       "cbcs",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_720p/$Number$.m4s",
+      "init": "video_720p/init.mp4"
+     },
+     {
+      "type": "audio",
+      "id": "4",
+      "height": null,
+      "bandwidth": 133183,
+      "codecs": "mp4a.40.2",
+      "kid": "487dd9cef63eb9e89d8fdeefbee25117",
+      "schemes": [
+       "cbcs",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.016,
+      "media": "audio/$Number$.m4s",
+      "init": "audio/init.mp4"
+     }
+    ]
+   },
+   "scheme": [
+    "cbcs"
+   ],
+   "segments": {
+    "video_360p": {
+     "init_status": 200,
+     "init_cache": "public, max-age=31536000, immutable",
+     "schm": "cbcs",
+     "tenc_kid": "f48ea1b553a95225913efc4a03afecdf",
+     "encv_or_enca": true,
+     "segs": {
+      "1": {
+       "status": 200,
+       "bytes": 604179,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "2": {
+       "status": 200,
+       "bytes": 477065,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "3": {
+       "status": 200,
+       "bytes": 639217,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      }
+     }
+    },
+    "video_1080p": {
+     "init_status": 200,
+     "init_cache": "public, max-age=31536000, immutable",
+     "schm": "cbcs",
+     "tenc_kid": "f48ea1b553a95225913efc4a03afecdf",
+     "encv_or_enca": true,
+     "segs": {
+      "1": {
+       "status": 200,
+       "bytes": 4438750,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "2": {
+       "status": 200,
+       "bytes": 3819724,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "3": {
+       "status": 200,
+       "bytes": 4245651,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      }
+     }
+    },
+    "audio": {
+     "init_status": 200,
+     "init_cache": "public, max-age=31536000, immutable",
+     "schm": "cbcs",
+     "tenc_kid": "487dd9cef63eb9e89d8fdeefbee25117",
+     "encv_or_enca": true,
+     "segs": {
+      "1": {
+       "status": 200,
+       "bytes": 98885,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "2": {
+       "status": 200,
+       "bytes": 97966,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "3": {
+       "status": 200,
+       "bytes": 98061,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      }
+     }
+    }
+   },
+   "entitlement_no_hdcp": {
+    "type": "entitlement_message",
+    "version": 2,
+    "license": {
+     "expiration_datetime": "2026-09-23T08:56:21.911Z",
+     "allow_persistence": false,
+     "fairplay": {
+      "real_time_expiration": false
+     },
+     "playready": {
+      "real_time_expiration": false
+     }
+    },
+    "content_keys_source": {
+     "inline": [
+      {
+       "id": "f48ea1b5-53a9-5225-913e-fc4a03afecdf",
+       "encrypted_key": "oxO/56vzwq7y+Crk415WPg==",
+       "iv": "4B8YReCeNAhSKrml3lCeJQ==",
+       "usage_policy": "SD_HD"
+      },
+      {
+       "id": "487dd9ce-f63e-b9e8-9d8f-deefbee25117",
+       "encrypted_key": "WAEeSjg55xd8OIb+wFFrog==",
+       "iv": "4B8YReCeNAhSKrml3lCeJQ==",
+       "usage_policy": "SD_HD"
+      }
+     ]
+    },
+    "content_key_usage_policies": [
+     {
+      "name": "SD_HD",
+      "widevine": {
+       "device_security_level": "SW_SECURE_CRYPTO"
+      },
+      "playready": {
+       "min_device_security_level": 150
+      },
+      "fairplay": {
+       "hdcp": "NONE",
+       "allow_airplay": true,
+       "allow_av_adapter": true
+      }
+     },
+     {
+      "name": "UHD",
+      "widevine": {
+       "device_security_level": "HW_SECURE_ALL",
+       "hdcp": "2.2"
+      },
+      "playready": {
+       "min_device_security_level": 3000
+      },
+      "fairplay": {
+       "hdcp": "TYPE1",
+       "allow_airplay": false,
+       "allow_av_adapter": false
+      }
+     }
+    ]
+   },
+   "axinom_token_valid": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXJzaW9uIjoxLCJjb21fa2V5X2lkIjoiNjM5NzYzZDItODAwOC00MzM5LTgwYjQtYjRjYzAwNzFiODM4IiwibWVzc2FnZSI6eyJ0eXBlIjoiZW50aXRsZW1lbnRfbWVzc2FnZSIsInZlcnNpb24iOjIsImxpY2Vuc2UiOnsiZXhwaXJhdGlvbl9kYXRldGltZSI6IjIwMjYtMDktMjNUMDg6NTY6MjEuOTExWiIsImFsbG93X3BlcnNpc3RlbmNlIjpmYWxzZSwiZmFpcnBsYXkiOnsicmVhbF90aW1lX2V4cGlyYXRpb24iOmZhbHNlfSwicGxheXJlYWR5Ijp7InJlYWxfdGltZV9leHBpcmF0aW9uIjpmYWxzZX19LCJjb250ZW50X2tleXNfc291cmNlIjp7ImlubGluZSI6W3siaWQiOiJmNDhlYTFiNS01M2E5LTUyMjUtOTEzZS1mYzRhMDNhZmVjZGYiLCJlbmNyeXB0ZWRfa2V5Ijoib3hPLzU2dnp3cTd5K0NyazQxNVdQZz09IiwiaXYiOiI0QjhZUmVDZU5BaFNLcm1sM2xDZUpRPT0iLCJ1c2FnZV9wb2xpY3kiOiJTRF9IRCJ9LHsiaWQiOiI0ODdkZDljZS1mNjNlLWI5ZTgtOWQ4Zi1kZWVmYmVlMjUxMTciLCJlbmNyeXB0ZWRfa2V5IjoiV0FFZVNqZzU1eGQ4T0liK3dGRnJvZz09IiwiaXYiOiI0QjhZUmVDZU5BaFNLcm1sM2xDZUpRPT0iLCJ1c2FnZV9wb2xpY3kiOiJTRF9IRCJ9LHsiaWQiOiJhMmY0Y2FjZS02ZDYyLWYyYjEtZDNkNC1jMmU2ZDFjNzJlMTEiLCJlbmNyeXB0ZWRfa2V5IjoidnRBZWx5T0xUU1BpUFozUXVnR3JTUT09IiwiaXYiOiI0QjhZUmVDZU5BaFNLcm1sM2xDZUpRPT0iLCJ1c2FnZV9wb2xpY3kiOiJVSEQifV19LCJjb250ZW50X2tleV91c2FnZV9wb2xpY2llcyI6W3sibmFtZSI6IlNEX0hEIiwid2lkZXZpbmUiOnsiZGV2aWNlX3NlY3VyaXR5X2xldmVsIjoiU1dfU0VDVVJFX0NSWVBUTyJ9LCJwbGF5cmVhZHkiOnsibWluX2RldmljZV9zZWN1cml0eV9sZXZlbCI6MTUwfSwiZmFpcnBsYXkiOnsiaGRjcCI6Ik5PTkUiLCJhbGxvd19haXJwbGF5Ijp0cnVlLCJhbGxvd19hdl9hZGFwdGVyIjp0cnVlfX0seyJuYW1lIjoiVUhEIiwid2lkZXZpbmUiOnsiZGV2aWNlX3NlY3VyaXR5X2xldmVsIjoiSFdfU0VDVVJFX0FMTCIsImhkY3AiOiIyLjIifSwicGxheXJlYWR5Ijp7Im1pbl9kZXZpY2Vfc2VjdXJpdHlfbGV2ZWwiOjMwMDB9LCJmYWlycGxheSI6eyJoZGNwIjoiVFlQRTEiLCJhbGxvd19haXJwbGF5IjpmYWxzZSwiYWxsb3dfYXZfYWRhcHRlciI6ZmFsc2V9fV19fQ.3E741_cWRtQoAs59vd642XQnhSLBSxXjns92fIX-tCg"
+  },
+  "VULG4K": {
+   "id": "ae60bf2f-5bd1-44cc-838b-d60e4594b98d",
+   "version": 9,
+   "rental_expires": "2026-09-23T08:56:39.457Z",
+   "policy": {
+    "nohdcp": {
+     "rentalWindowH": 48,
+     "offline": false,
+     "maxHeight": 1080,
+     "reason": "no HDCP: this device plays up to 1080p"
+    },
+    "hdcp": {
+     "rentalWindowH": 48,
+     "offline": false,
+     "maxHeight": 2160,
+     "reason": "HDCP claimed: 2160p key will be issued"
+    }
+   },
+   "mpd_cache_control": "private, max-age=60",
+   "hls_variants_hdcp": [
+    {
+     "res": "1920x1080",
+     "bw": 7080918,
+     "uri": "stream_1.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiJhZTYwYmYyZi01YmQxLTQ0Y2MtODM4Yi1kNjBlNDU5NGI5OGQiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODA5OTksImV4cCI6MTc4OTk5NTM5OX0.HznOMOdFWPINR0D5U_KNubSwqxYamTDbHYqW07KNl98"
+    },
+    {
+     "res": "3840x2160",
+     "bw": 18262195,
+     "uri": "stream_2.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiJhZTYwYmYyZi01YmQxLTQ0Y2MtODM4Yi1kNjBlNDU5NGI5OGQiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODA5OTksImV4cCI6MTc4OTk5NTM5OX0.HznOMOdFWPINR0D5U_KNubSwqxYamTDbHYqW07KNl98"
+    },
+    {
+     "res": "640x360",
+     "bw": 1069922,
+     "uri": "stream_3.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiJhZTYwYmYyZi01YmQxLTQ0Y2MtODM4Yi1kNjBlNDU5NGI5OGQiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODA5OTksImV4cCI6MTc4OTk5NTM5OX0.HznOMOdFWPINR0D5U_KNubSwqxYamTDbHYqW07KNl98"
+    },
+    {
+     "res": "853x480",
+     "bw": 1895221,
+     "uri": "stream_4.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiJhZTYwYmYyZi01YmQxLTQ0Y2MtODM4Yi1kNjBlNDU5NGI5OGQiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODA5OTksImV4cCI6MTc4OTk5NTM5OX0.HznOMOdFWPINR0D5U_KNubSwqxYamTDbHYqW07KNl98"
+    },
+    {
+     "res": "1280x720",
+     "bw": 3614743,
+     "uri": "stream_5.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiJhZTYwYmYyZi01YmQxLTQ0Y2MtODM4Yi1kNjBlNDU5NGI5OGQiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODA5OTksImV4cCI6MTc4OTk5NTM5OX0.HznOMOdFWPINR0D5U_KNubSwqxYamTDbHYqW07KNl98"
+    }
+   ],
+   "hls_keylines": {
+    "stream_1.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;charset=UTF-16;base64,vgEAAAEAAQC0ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADMALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAFMAPgA8AEsASQBEACAAQQBMAEcASQBEAD0AIgBBAEUAUwBDAEIAQwAiACAAVgBBAEwAVQBFAD0AIgBQAGIATQA1AEgAWgB5AGYARwBlAHgAcgBEAE4AOQBwAG4ANgA2AFQAYgB3AD0APQAiAD4APAAvAEsASQBEAD4APAAvAEsASQBEAFMAPgA8AC8AUABSAE8AVABFAEMAVABJAE4ARgBPAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",IV=0xa6ac2372b2d7a0d1c82dda087edb531a,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEODvUIWZTCBxvZxSTlENM/cSEB05sz2fnOwZawzfaZ+uk28SENML514eLUnW/NKlWhzkn6VI88aJmwY=\",KEYID=0x1d39b33d9f9cec196b0cdf699fae936f,IV=0xa6ac2372b2d7a0d1c82dda087edb531a,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"skd://1d39b33d-9f9c-ec19-6b0c-df699fae936f:a6ac2372b2d7a0d1c82dda087edb531a\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_2.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;charset=UTF-16;base64,vgEAAAEAAQC0ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADMALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAFMAPgA8AEsASQBEACAAQQBMAEcASQBEAD0AIgBBAEUAUwBDAEIAQwAiACAAVgBBAEwAVQBFAD0AIgBYAHUAYwBMADAAeQAwAGUAMQBrAG4AOAAwAHEAVgBhAEgATwBTAGYAcABRAD0APQAiAD4APAAvAEsASQBEAD4APAAvAEsASQBEAFMAPgA8AC8AUABSAE8AVABFAEMAVABJAE4ARgBPAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",IV=0xa6ac2372b2d7a0d1c82dda087edb531a,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEODvUIWZTCBxvZxSTlENM/cSEB05sz2fnOwZawzfaZ+uk28SENML514eLUnW/NKlWhzkn6VI88aJmwY=\",KEYID=0xd30be75e1e2d49d6fcd2a55a1ce49fa5,IV=0xa6ac2372b2d7a0d1c82dda087edb531a,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"skd://d30be75e-1e2d-49d6-fcd2-a55a1ce49fa5:a6ac2372b2d7a0d1c82dda087edb531a\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_3.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;charset=UTF-16;base64,vgEAAAEAAQC0ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADMALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAFMAPgA8AEsASQBEACAAQQBMAEcASQBEAD0AIgBBAEUAUwBDAEIAQwAiACAAVgBBAEwAVQBFAD0AIgBQAGIATQA1AEgAWgB5AGYARwBlAHgAcgBEAE4AOQBwAG4ANgA2AFQAYgB3AD0APQAiAD4APAAvAEsASQBEAD4APAAvAEsASQBEAFMAPgA8AC8AUABSAE8AVABFAEMAVABJAE4ARgBPAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",IV=0xa6ac2372b2d7a0d1c82dda087edb531a,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEODvUIWZTCBxvZxSTlENM/cSEB05sz2fnOwZawzfaZ+uk28SENML514eLUnW/NKlWhzkn6VI88aJmwY=\",KEYID=0x1d39b33d9f9cec196b0cdf699fae936f,IV=0xa6ac2372b2d7a0d1c82dda087edb531a,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"skd://1d39b33d-9f9c-ec19-6b0c-df699fae936f:a6ac2372b2d7a0d1c82dda087edb531a\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_4.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;charset=UTF-16;base64,vgEAAAEAAQC0ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADMALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAFMAPgA8AEsASQBEACAAQQBMAEcASQBEAD0AIgBBAEUAUwBDAEIAQwAiACAAVgBBAEwAVQBFAD0AIgBQAGIATQA1AEgAWgB5AGYARwBlAHgAcgBEAE4AOQBwAG4ANgA2AFQAYgB3AD0APQAiAD4APAAvAEsASQBEAD4APAAvAEsASQBEAFMAPgA8AC8AUABSAE8AVABFAEMAVABJAE4ARgBPAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",IV=0xa6ac2372b2d7a0d1c82dda087edb531a,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEODvUIWZTCBxvZxSTlENM/cSEB05sz2fnOwZawzfaZ+uk28SENML514eLUnW/NKlWhzkn6VI88aJmwY=\",KEYID=0x1d39b33d9f9cec196b0cdf699fae936f,IV=0xa6ac2372b2d7a0d1c82dda087edb531a,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"skd://1d39b33d-9f9c-ec19-6b0c-df699fae936f:a6ac2372b2d7a0d1c82dda087edb531a\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_5.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;charset=UTF-16;base64,vgEAAAEAAQC0ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADMALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAFMAPgA8AEsASQBEACAAQQBMAEcASQBEAD0AIgBBAEUAUwBDAEIAQwAiACAAVgBBAEwAVQBFAD0AIgBQAGIATQA1AEgAWgB5AGYARwBlAHgAcgBEAE4AOQBwAG4ANgA2AFQAYgB3AD0APQAiAD4APAAvAEsASQBEAD4APAAvAEsASQBEAFMAPgA8AC8AUABSAE8AVABFAEMAVABJAE4ARgBPAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",IV=0xa6ac2372b2d7a0d1c82dda087edb531a,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEODvUIWZTCBxvZxSTlENM/cSEB05sz2fnOwZawzfaZ+uk28SENML514eLUnW/NKlWhzkn6VI88aJmwY=\",KEYID=0x1d39b33d9f9cec196b0cdf699fae936f,IV=0xa6ac2372b2d7a0d1c82dda087edb531a,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"skd://1d39b33d-9f9c-ec19-6b0c-df699fae936f:a6ac2372b2d7a0d1c82dda087edb531a\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_0.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;charset=UTF-16;base64,vgEAAAEAAQC0ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADMALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAFMAPgA8AEsASQBEACAAQQBMAEcASQBEAD0AIgBBAEUAUwBDAEIAQwAiACAAVgBBAEwAVQBFAD0AIgBoAFYARAB2ADQARQB5AFoAYwBTAEMAOQBuAEYASgBPAFUAUQAwAHoAOQB3AD0APQAiAD4APAAvAEsASQBEAD4APAAvAEsASQBEAFMAPgA8AC8AUABSAE8AVABFAEMAVABJAE4ARgBPAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",IV=0xa6ac2372b2d7a0d1c82dda087edb531a,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEODvUIWZTCBxvZxSTlENM/cSEB05sz2fnOwZawzfaZ+uk28SENML514eLUnW/NKlWhzkn6VI88aJmwY=\",KEYID=0xe0ef5085994c2071bd9c524e510d33f7,IV=0xa6ac2372b2d7a0d1c82dda087edb531a,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES,URI=\"skd://e0ef5085-994c-2071-bd9c-524e510d33f7:a6ac2372b2d7a0d1c82dda087edb531a\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ]
+   },
+   "mpd": {
+    "type": "static",
+    "duration": "PT122.083336S",
+    "reps": [
+     {
+      "type": "video",
+      "id": "0",
+      "height": "1080",
+      "bandwidth": 6941815,
+      "codecs": "avc1.640028",
+      "kid": "1d39b33d9f9cec196b0cdf699fae936f",
+      "schemes": [
+       "cbcs",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_1080p/$Number$.m4s",
+      "init": "video_1080p/init.mp4"
+     },
+     {
+      "type": "video",
+      "id": "2",
+      "height": "360",
+      "bandwidth": 930819,
+      "codecs": "avc1.64001e",
+      "kid": "1d39b33d9f9cec196b0cdf699fae936f",
+      "schemes": [
+       "cbcs",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_360p/$Number$.m4s",
+      "init": "video_360p/init.mp4"
+     },
+     {
+      "type": "video",
+      "id": "3",
+      "height": "480",
+      "bandwidth": 1756118,
+      "codecs": "avc1.64001e",
+      "kid": "1d39b33d9f9cec196b0cdf699fae936f",
+      "schemes": [
+       "cbcs",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_480p/$Number$.m4s",
+      "init": "video_480p/init.mp4"
+     },
+     {
+      "type": "video",
+      "id": "4",
+      "height": "720",
+      "bandwidth": 3475640,
+      "codecs": "avc1.64001f",
+      "kid": "1d39b33d9f9cec196b0cdf699fae936f",
+      "schemes": [
+       "cbcs",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_720p/$Number$.m4s",
+      "init": "video_720p/init.mp4"
+     },
+     {
+      "type": "video",
+      "id": "1",
+      "height": "2160",
+      "bandwidth": 18123092,
+      "codecs": "avc1.640033",
+      "kid": "d30be75e1e2d49d6fcd2a55a1ce49fa5",
+      "schemes": [
+       "cbcs",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_2160p/$Number$.m4s",
+      "init": "video_2160p/init.mp4"
+     },
+     {
+      "type": "audio",
+      "id": "5",
+      "height": null,
+      "bandwidth": 139103,
+      "codecs": "mp4a.40.2",
+      "kid": "e0ef5085994c2071bd9c524e510d33f7",
+      "schemes": [
+       "cbcs",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.013968253968254,
+      "media": "audio/$Number$.m4s",
+      "init": "audio/init.mp4"
+     }
+    ]
+   },
+   "scheme": [
+    "cbcs"
+   ],
+   "segments": {
+    "video_360p": {
+     "init_status": 200,
+     "init_cache": "public, max-age=31536000, immutable",
+     "schm": "cbcs",
+     "tenc_kid": "1d39b33d9f9cec196b0cdf699fae936f",
+     "encv_or_enca": true,
+     "segs": {
+      "1": {
+       "status": 200,
+       "bytes": 562098,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "2": {
+       "status": 200,
+       "bytes": 320286,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "3": {
+       "status": 200,
+       "bytes": 569752,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      }
+     }
+    },
+    "video_1080p": {
+     "init_status": 200,
+     "init_cache": "public, max-age=31536000, immutable",
+     "schm": "cbcs",
+     "tenc_kid": "1d39b33d9f9cec196b0cdf699fae936f",
+     "encv_or_enca": true,
+     "segs": {
+      "1": {
+       "status": 200,
+       "bytes": 3840851,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "2": {
+       "status": 200,
+       "bytes": 2255606,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "3": {
+       "status": 200,
+       "bytes": 4188112,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      }
+     }
+    },
+    "video_2160p": {
+     "init_status": 200,
+     "init_cache": "public, max-age=31536000, immutable",
+     "schm": "cbcs",
+     "tenc_kid": "d30be75e1e2d49d6fcd2a55a1ce49fa5",
+     "encv_or_enca": true,
+     "segs": {
+      "1": {
+       "status": 200,
+       "bytes": 10036015,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "2": {
+       "status": 200,
+       "bytes": 5959899,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "3": {
+       "status": 200,
+       "bytes": 11022784,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      }
+     }
+    },
+    "audio": {
+     "init_status": 200,
+     "init_cache": "public, max-age=31536000, immutable",
+     "schm": "cbcs",
+     "tenc_kid": "e0ef5085994c2071bd9c524e510d33f7",
+     "encv_or_enca": true,
+     "segs": {
+      "1": {
+       "status": 200,
+       "bytes": 99227,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "2": {
+       "status": 200,
+       "bytes": 104166,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "3": {
+       "status": 200,
+       "bytes": 100176,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      }
+     }
+    }
+   },
+   "entitlement_no_hdcp": {
+    "type": "entitlement_message",
+    "version": 2,
+    "license": {
+     "expiration_datetime": "2026-09-23T08:56:39.457Z",
+     "allow_persistence": false,
+     "fairplay": {
+      "real_time_expiration": false
+     },
+     "playready": {
+      "real_time_expiration": false
+     }
+    },
+    "content_keys_source": {
+     "inline": [
+      {
+       "id": "1d39b33d-9f9c-ec19-6b0c-df699fae936f",
+       "encrypted_key": "uaprNobMPebJIsdSB2Yy/A==",
+       "iv": "pqwjcrLXoNHILdoIfttTGg==",
+       "usage_policy": "SD_HD"
+      },
+      {
+       "id": "e0ef5085-994c-2071-bd9c-524e510d33f7",
+       "encrypted_key": "1d5phDhGV2CUg50NAjFn8Q==",
+       "iv": "pqwjcrLXoNHILdoIfttTGg==",
+       "usage_policy": "SD_HD"
+      }
+     ]
+    },
+    "content_key_usage_policies": [
+     {
+      "name": "SD_HD",
+      "widevine": {
+       "device_security_level": "SW_SECURE_CRYPTO"
+      },
+      "playready": {
+       "min_device_security_level": 150
+      },
+      "fairplay": {
+       "hdcp": "NONE",
+       "allow_airplay": true,
+       "allow_av_adapter": true
+      }
+     },
+     {
+      "name": "UHD",
+      "widevine": {
+       "device_security_level": "HW_SECURE_ALL",
+       "hdcp": "2.2"
+      },
+      "playready": {
+       "min_device_security_level": 3000
+      },
+      "fairplay": {
+       "hdcp": "TYPE1",
+       "allow_airplay": false,
+       "allow_av_adapter": false
+      }
+     }
+    ]
+   },
+   "axinom_token_valid": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXJzaW9uIjoxLCJjb21fa2V5X2lkIjoiNjM5NzYzZDItODAwOC00MzM5LTgwYjQtYjRjYzAwNzFiODM4IiwibWVzc2FnZSI6eyJ0eXBlIjoiZW50aXRsZW1lbnRfbWVzc2FnZSIsInZlcnNpb24iOjIsImxpY2Vuc2UiOnsiZXhwaXJhdGlvbl9kYXRldGltZSI6IjIwMjYtMDktMjNUMDg6NTY6MzkuNDU3WiIsImFsbG93X3BlcnNpc3RlbmNlIjpmYWxzZSwiZmFpcnBsYXkiOnsicmVhbF90aW1lX2V4cGlyYXRpb24iOmZhbHNlfSwicGxheXJlYWR5Ijp7InJlYWxfdGltZV9leHBpcmF0aW9uIjpmYWxzZX19LCJjb250ZW50X2tleXNfc291cmNlIjp7ImlubGluZSI6W3siaWQiOiIxZDM5YjMzZC05ZjljLWVjMTktNmIwYy1kZjY5OWZhZTkzNmYiLCJlbmNyeXB0ZWRfa2V5IjoidWFwck5vYk1QZWJKSXNkU0IyWXkvQT09IiwiaXYiOiJwcXdqY3JMWG9OSElMZG9JZnR0VEdnPT0iLCJ1c2FnZV9wb2xpY3kiOiJTRF9IRCJ9LHsiaWQiOiJlMGVmNTA4NS05OTRjLTIwNzEtYmQ5Yy01MjRlNTEwZDMzZjciLCJlbmNyeXB0ZWRfa2V5IjoiMWQ1cGhEaEdWMkNVZzUwTkFqRm44UT09IiwiaXYiOiJwcXdqY3JMWG9OSElMZG9JZnR0VEdnPT0iLCJ1c2FnZV9wb2xpY3kiOiJTRF9IRCJ9LHsiaWQiOiJkMzBiZTc1ZS0xZTJkLTQ5ZDYtZmNkMi1hNTVhMWNlNDlmYTUiLCJlbmNyeXB0ZWRfa2V5IjoiTXpUaVd4a3g4RjZPRjJXakJRbzhMZz09IiwiaXYiOiJwcXdqY3JMWG9OSElMZG9JZnR0VEdnPT0iLCJ1c2FnZV9wb2xpY3kiOiJVSEQifV19LCJjb250ZW50X2tleV91c2FnZV9wb2xpY2llcyI6W3sibmFtZSI6IlNEX0hEIiwid2lkZXZpbmUiOnsiZGV2aWNlX3NlY3VyaXR5X2xldmVsIjoiU1dfU0VDVVJFX0NSWVBUTyJ9LCJwbGF5cmVhZHkiOnsibWluX2RldmljZV9zZWN1cml0eV9sZXZlbCI6MTUwfSwiZmFpcnBsYXkiOnsiaGRjcCI6Ik5PTkUiLCJhbGxvd19haXJwbGF5Ijp0cnVlLCJhbGxvd19hdl9hZGFwdGVyIjp0cnVlfX0seyJuYW1lIjoiVUhEIiwid2lkZXZpbmUiOnsiZGV2aWNlX3NlY3VyaXR5X2xldmVsIjoiSFdfU0VDVVJFX0FMTCIsImhkY3AiOiIyLjIifSwicGxheXJlYWR5Ijp7Im1pbl9kZXZpY2Vfc2VjdXJpdHlfbGV2ZWwiOjMwMDB9LCJmYWlycGxheSI6eyJoZGNwIjoiVFlQRTEiLCJhbGxvd19haXJwbGF5IjpmYWxzZSwiYWxsb3dfYXZfYWRhcHRlciI6ZmFsc2V9fV19fQ.qqohgx9nSUGHjytAijTERBJzu3jQ7zaigifxNXf3c_8"
+  },
+  "X9": {
+   "id": "becd8657-a8c0-4502-838d-527cb533d166",
+   "version": 1,
+   "rental_expires": "2026-09-23T08:56:57.499Z",
+   "policy": {
+    "nohdcp": {
+     "rentalWindowH": 48,
+     "offline": false,
+     "maxHeight": 1080,
+     "reason": "no HDCP: this device plays up to 1080p"
+    },
+    "hdcp": {
+     "rentalWindowH": 48,
+     "offline": false,
+     "maxHeight": 2160,
+     "reason": "HDCP claimed: 2160p key will be issued"
+    }
+   },
+   "mpd_cache_control": "private, max-age=60",
+   "hls_variants_hdcp": [
+    {
+     "res": "1920x1080",
+     "bw": 7441161,
+     "uri": "stream_1.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiJiZWNkODY1Ny1hOGMwLTQ1MDItODM4ZC01MjdjYjUzM2QxNjYiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODEwMTgsImV4cCI6MTc4OTk5NTQxOH0.8mL2JNyPeBVKIzzRUjEwv6ajeY07EpdiT10qH25cU7s"
+    },
+    {
+     "res": "3840x2160",
+     "bw": 19286362,
+     "uri": "stream_2.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiJiZWNkODY1Ny1hOGMwLTQ1MDItODM4ZC01MjdjYjUzM2QxNjYiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODEwMTgsImV4cCI6MTc4OTk5NTQxOH0.8mL2JNyPeBVKIzzRUjEwv6ajeY07EpdiT10qH25cU7s"
+    },
+    {
+     "res": "640x360",
+     "bw": 1137110,
+     "uri": "stream_3.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiJiZWNkODY1Ny1hOGMwLTQ1MDItODM4ZC01MjdjYjUzM2QxNjYiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODEwMTgsImV4cCI6MTc4OTk5NTQxOH0.8mL2JNyPeBVKIzzRUjEwv6ajeY07EpdiT10qH25cU7s"
+    },
+    {
+     "res": "853x480",
+     "bw": 1991077,
+     "uri": "stream_4.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiJiZWNkODY1Ny1hOGMwLTQ1MDItODM4ZC01MjdjYjUzM2QxNjYiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODEwMTgsImV4cCI6MTc4OTk5NTQxOH0.8mL2JNyPeBVKIzzRUjEwv6ajeY07EpdiT10qH25cU7s"
+    },
+    {
+     "res": "1280x720",
+     "bw": 3789882,
+     "uri": "stream_5.m3u8?t=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdWRpdC00YXZ3MGYiLCJmaWxtSWQiOiJiZWNkODY1Ny1hOGMwLTQ1MDItODM4ZC01MjdjYjUzM2QxNjYiLCJkZXZpY2VJZCI6ImF1ZGl0IiwidWhkIjp0cnVlLCJpYXQiOjE3ODk5ODEwMTgsImV4cCI6MTc4OTk5NTQxOH0.8mL2JNyPeBVKIzzRUjEwv6ajeY07EpdiT10qH25cU7s"
+    }
+   ],
+   "hls_keylines": {
+    "stream_1.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"data:text/plain;charset=UTF-16;base64,BgIAAAEAAQD8ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADAALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsARQBZAEwARQBOAD4AMQA2ADwALwBLAEUAWQBMAEUATgA+ADwAQQBMAEcASQBEAD4AQQBFAFMAQwBUAFIAPAAvAEEATABHAEkARAA+ADwALwBQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAD4AWQBjAGYAegArAFoAbwBlAGoAYwAvAEMAZAA2AE4ANwBwADIANABKAGUAUQA9AD0APAAvAEsASQBEAD4APABDAEgARQBDAEsAUwBVAE0APgBrADUASAB2ADQAdAB2AGgASABVAEUAPQA8AC8AQwBIAEUAQwBLAFMAVQBNAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEOOiJqtb4pCgcVySjSOsXV4SEPnzx2Eems+Nwneje6duCXkSEFljlfupWz88scp6n4C4XwVI49yVmwY=\",KEYID=0xf9f3c7611e9acf8dc277a37ba76e0979,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"skd://ztor/f9f3c7611e9acf8dc277a37ba76e0979\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_2.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"data:text/plain;charset=UTF-16;base64,BgIAAAEAAQD8ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADAALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsARQBZAEwARQBOAD4AMQA2ADwALwBLAEUAWQBMAEUATgA+ADwAQQBMAEcASQBEAD4AQQBFAFMAQwBUAFIAPAAvAEEATABHAEkARAA+ADwALwBQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAD4AKwA1AFYAagBXAFYAdQBwAFAARAArAHgAeQBuAHEAZgBnAEwAaABmAEIAUQA9AD0APAAvAEsASQBEAD4APABDAEgARQBDAEsAUwBVAE0APgA1AGgAWgBuAEYAKwBBAG0ASgAvAHMAPQA8AC8AQwBIAEUAQwBLAFMAVQBNAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEOOiJqtb4pCgcVySjSOsXV4SEPnzx2Eems+Nwneje6duCXkSEFljlfupWz88scp6n4C4XwVI49yVmwY=\",KEYID=0x596395fba95b3f3cb1ca7a9f80b85f05,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"skd://ztor/f9f3c7611e9acf8dc277a37ba76e0979\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_3.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"data:text/plain;charset=UTF-16;base64,BgIAAAEAAQD8ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADAALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsARQBZAEwARQBOAD4AMQA2ADwALwBLAEUAWQBMAEUATgA+ADwAQQBMAEcASQBEAD4AQQBFAFMAQwBUAFIAPAAvAEEATABHAEkARAA+ADwALwBQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAD4AWQBjAGYAegArAFoAbwBlAGoAYwAvAEMAZAA2AE4ANwBwADIANABKAGUAUQA9AD0APAAvAEsASQBEAD4APABDAEgARQBDAEsAUwBVAE0APgBrADUASAB2ADQAdAB2AGgASABVAEUAPQA8AC8AQwBIAEUAQwBLAFMAVQBNAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEOOiJqtb4pCgcVySjSOsXV4SEPnzx2Eems+Nwneje6duCXkSEFljlfupWz88scp6n4C4XwVI49yVmwY=\",KEYID=0xf9f3c7611e9acf8dc277a37ba76e0979,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"skd://ztor/f9f3c7611e9acf8dc277a37ba76e0979\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_4.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"data:text/plain;charset=UTF-16;base64,BgIAAAEAAQD8ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADAALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsARQBZAEwARQBOAD4AMQA2ADwALwBLAEUAWQBMAEUATgA+ADwAQQBMAEcASQBEAD4AQQBFAFMAQwBUAFIAPAAvAEEATABHAEkARAA+ADwALwBQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAD4AWQBjAGYAegArAFoAbwBlAGoAYwAvAEMAZAA2AE4ANwBwADIANABKAGUAUQA9AD0APAAvAEsASQBEAD4APABDAEgARQBDAEsAUwBVAE0APgBrADUASAB2ADQAdAB2AGgASABVAEUAPQA8AC8AQwBIAEUAQwBLAFMAVQBNAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEOOiJqtb4pCgcVySjSOsXV4SEPnzx2Eems+Nwneje6duCXkSEFljlfupWz88scp6n4C4XwVI49yVmwY=\",KEYID=0xf9f3c7611e9acf8dc277a37ba76e0979,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"skd://ztor/f9f3c7611e9acf8dc277a37ba76e0979\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_5.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"data:text/plain;charset=UTF-16;base64,BgIAAAEAAQD8ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADAALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsARQBZAEwARQBOAD4AMQA2ADwALwBLAEUAWQBMAEUATgA+ADwAQQBMAEcASQBEAD4AQQBFAFMAQwBUAFIAPAAvAEEATABHAEkARAA+ADwALwBQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAD4AWQBjAGYAegArAFoAbwBlAGoAYwAvAEMAZAA2AE4ANwBwADIANABKAGUAUQA9AD0APAAvAEsASQBEAD4APABDAEgARQBDAEsAUwBVAE0APgBrADUASAB2ADQAdAB2AGgASABVAEUAPQA8AC8AQwBIAEUAQwBLAFMAVQBNAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEOOiJqtb4pCgcVySjSOsXV4SEPnzx2Eems+Nwneje6duCXkSEFljlfupWz88scp6n4C4XwVI49yVmwY=\",KEYID=0xf9f3c7611e9acf8dc277a37ba76e0979,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"skd://ztor/f9f3c7611e9acf8dc277a37ba76e0979\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ],
+    "stream_0.m3u8": [
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"data:text/plain;charset=UTF-16;base64,BgIAAAEAAQD8ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADAALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsARQBZAEwARQBOAD4AMQA2ADwALwBLAEUAWQBMAEUATgA+ADwAQQBMAEcASQBEAD4AQQBFAFMAQwBUAFIAPAAvAEEATABHAEkARAA+ADwALwBQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAD4AcQB5AGEAaQA0ACsASgBiAG8ASgBCAHgAWABKAEsATgBJADYAeABkAFgAZwA9AD0APAAvAEsASQBEAD4APABDAEgARQBDAEsAUwBVAE0APgB1AEgAYQA1ADMAbQB6AHoAVgBnAGcAPQA8AC8AQwBIAEUAQwBLAFMAVQBNAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.microsoft.playready\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"data:text/plain;base64,AAAAXHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADwSEOOiJqtb4pCgcVySjSOsXV4SEPnzx2Eems+Nwneje6duCXkSEFljlfupWz88scp6n4C4XwVI49yVmwY=\",KEYID=0xe3a226ab5be290a0715c928d23ac5d5e,KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed\"",
+     "#EXT-X-KEY:METHOD=SAMPLE-AES-CTR,URI=\"skd://ztor/f9f3c7611e9acf8dc277a37ba76e0979\",KEYFORMATVERSIONS=\"1\",KEYFORMAT=\"com.apple.streamingkeydelivery\""
+    ]
+   },
+   "mpd": {
+    "type": "static",
+    "duration": "PT1099.166626S",
+    "reps": [
+     {
+      "type": "video",
+      "id": "0",
+      "height": "1080",
+      "bandwidth": 7298723,
+      "codecs": "avc1.640028",
+      "kid": "f9f3c7611e9acf8dc277a37ba76e0979",
+      "schemes": [
+       "cenc",
+       "urn:uuid:1077efec-c0b2-4d02-ace3-3c1e52e2fb4b",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_1080p/$Number$.m4s",
+      "init": "video_1080p/init.mp4"
+     },
+     {
+      "type": "video",
+      "id": "2",
+      "height": "360",
+      "bandwidth": 994672,
+      "codecs": "avc1.64001e",
+      "kid": "f9f3c7611e9acf8dc277a37ba76e0979",
+      "schemes": [
+       "cenc",
+       "urn:uuid:1077efec-c0b2-4d02-ace3-3c1e52e2fb4b",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_360p/$Number$.m4s",
+      "init": "video_360p/init.mp4"
+     },
+     {
+      "type": "video",
+      "id": "3",
+      "height": "480",
+      "bandwidth": 1848639,
+      "codecs": "avc1.64001e",
+      "kid": "f9f3c7611e9acf8dc277a37ba76e0979",
+      "schemes": [
+       "cenc",
+       "urn:uuid:1077efec-c0b2-4d02-ace3-3c1e52e2fb4b",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_480p/$Number$.m4s",
+      "init": "video_480p/init.mp4"
+     },
+     {
+      "type": "video",
+      "id": "4",
+      "height": "720",
+      "bandwidth": 3647444,
+      "codecs": "avc1.64001f",
+      "kid": "f9f3c7611e9acf8dc277a37ba76e0979",
+      "schemes": [
+       "cenc",
+       "urn:uuid:1077efec-c0b2-4d02-ace3-3c1e52e2fb4b",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_720p/$Number$.m4s",
+      "init": "video_720p/init.mp4"
+     },
+     {
+      "type": "video",
+      "id": "1",
+      "height": "2160",
+      "bandwidth": 19143924,
+      "codecs": "avc1.640033",
+      "kid": "596395fba95b3f3cb1ca7a9f80b85f05",
+      "schemes": [
+       "cenc",
+       "urn:uuid:1077efec-c0b2-4d02-ace3-3c1e52e2fb4b",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.0,
+      "media": "video_2160p/$Number$.m4s",
+      "init": "video_2160p/init.mp4"
+     },
+     {
+      "type": "audio",
+      "id": "5",
+      "height": null,
+      "bandwidth": 142438,
+      "codecs": "mp4a.40.2",
+      "kid": "e3a226ab5be290a0715c928d23ac5d5e",
+      "schemes": [
+       "cenc",
+       "urn:uuid:1077efec-c0b2-4d02-ace3-3c1e52e2fb4b",
+       "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95",
+       "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
+      ],
+      "segdur": 6.014013605442177,
+      "media": "audio/$Number$.m4s",
+      "init": "audio/init.mp4"
+     }
+    ]
+   },
+   "scheme": [
+    "cenc"
+   ],
+   "segments": {
+    "video_360p": {
+     "init_status": 200,
+     "init_cache": "public, max-age=31536000, immutable",
+     "schm": "cenc",
+     "tenc_kid": "f9f3c7611e9acf8dc277a37ba76e0979",
+     "encv_or_enca": true,
+     "segs": {
+      "1": {
+       "status": 200,
+       "bytes": 563250,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "2": {
+       "status": 200,
+       "bytes": 321438,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "3": {
+       "status": 200,
+       "bytes": 570904,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      }
+     }
+    },
+    "video_1080p": {
+     "init_status": 200,
+     "init_cache": "public, max-age=31536000, immutable",
+     "schm": "cenc",
+     "tenc_kid": "f9f3c7611e9acf8dc277a37ba76e0979",
+     "encv_or_enca": true,
+     "segs": {
+      "1": {
+       "status": 200,
+       "bytes": 3821011,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "2": {
+       "status": 200,
+       "bytes": 2298334,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "3": {
+       "status": 200,
+       "bytes": 4170896,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      }
+     }
+    },
+    "video_2160p": {
+     "init_status": 200,
+     "init_cache": "public, max-age=31536000, immutable",
+     "schm": "cenc",
+     "tenc_kid": "596395fba95b3f3cb1ca7a9f80b85f05",
+     "encv_or_enca": true,
+     "segs": {
+      "1": {
+       "status": 200,
+       "bytes": 10027961,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "2": {
+       "status": 200,
+       "bytes": 5915586,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "3": {
+       "status": 200,
+       "bytes": 11033681,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      }
+     }
+    },
+    "audio": {
+     "init_status": 200,
+     "init_cache": "public, max-age=31536000, immutable",
+     "schm": "cenc",
+     "tenc_kid": "e3a226ab5be290a0715c928d23ac5d5e",
+     "encv_or_enca": true,
+     "segs": {
+      "1": {
+       "status": 200,
+       "bytes": 101344,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "2": {
+       "status": 200,
+       "bytes": 106267,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      },
+      "3": {
+       "status": 200,
+       "bytes": 102285,
+       "senc": true,
+       "cache": "public, max-age=31536000, immutable"
+      }
+     }
+    }
+   },
+   "entitlement_no_hdcp": {
+    "type": "entitlement_message",
+    "version": 2,
+    "license": {
+     "expiration_datetime": "2026-09-23T08:56:57.499Z",
+     "allow_persistence": false,
+     "fairplay": {
+      "real_time_expiration": false
+     },
+     "playready": {
+      "real_time_expiration": false
+     }
+    },
+    "content_keys_source": {
+     "inline": [
+      {
+       "id": "f9f3c761-1e9a-cf8d-c277-a37ba76e0979",
+       "encrypted_key": "zo1N6FCFjJYXDntr7kdyCA==",
+       "usage_policy": "SD_HD"
+      },
+      {
+       "id": "e3a226ab-5be2-90a0-715c-928d23ac5d5e",
+       "encrypted_key": "zvLPornkVQe/WBy6UB/VtA==",
+       "usage_policy": "SD_HD"
+      }
+     ]
+    },
+    "content_key_usage_policies": [
+     {
+      "name": "SD_HD",
+      "widevine": {
+       "device_security_level": "SW_SECURE_CRYPTO"
+      },
+      "playready": {
+       "min_device_security_level": 150
+      },
+      "fairplay": {
+       "hdcp": "NONE",
+       "allow_airplay": true,
+       "allow_av_adapter": true
+      }
+     },
+     {
+      "name": "UHD",
+      "widevine": {
+       "device_security_level": "HW_SECURE_ALL",
+       "hdcp": "2.2"
+      },
+      "playready": {
+       "min_device_security_level": 3000
+      },
+      "fairplay": {
+       "hdcp": "TYPE1",
+       "allow_airplay": false,
+       "allow_av_adapter": false
+      }
+     }
+    ]
+   },
+   "axinom_token_valid": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXJzaW9uIjoxLCJjb21fa2V5X2lkIjoiNjM5NzYzZDItODAwOC00MzM5LTgwYjQtYjRjYzAwNzFiODM4IiwibWVzc2FnZSI6eyJ0eXBlIjoiZW50aXRsZW1lbnRfbWVzc2FnZSIsInZlcnNpb24iOjIsImxpY2Vuc2UiOnsiZXhwaXJhdGlvbl9kYXRldGltZSI6IjIwMjYtMDktMjNUMDg6NTY6NTcuNDk5WiIsImFsbG93X3BlcnNpc3RlbmNlIjpmYWxzZSwiZmFpcnBsYXkiOnsicmVhbF90aW1lX2V4cGlyYXRpb24iOmZhbHNlfSwicGxheXJlYWR5Ijp7InJlYWxfdGltZV9leHBpcmF0aW9uIjpmYWxzZX19LCJjb250ZW50X2tleXNfc291cmNlIjp7ImlubGluZSI6W3siaWQiOiJmOWYzYzc2MS0xZTlhLWNmOGQtYzI3Ny1hMzdiYTc2ZTA5NzkiLCJlbmNyeXB0ZWRfa2V5Ijoiem8xTjZGQ0ZqSllYRG50cjdrZHlDQT09IiwidXNhZ2VfcG9saWN5IjoiU0RfSEQifSx7ImlkIjoiZTNhMjI2YWItNWJlMi05MGEwLTcxNWMtOTI4ZDIzYWM1ZDVlIiwiZW5jcnlwdGVkX2tleSI6Inp2TFBvcm5rVlFlL1dCeTZVQi9WdEE9PSIsInVzYWdlX3BvbGljeSI6IlNEX0hEIn0seyJpZCI6IjU5NjM5NWZiLWE5NWItM2YzYy1iMWNhLTdhOWY4MGI4NWYwNSIsImVuY3J5cHRlZF9rZXkiOiI1am4rRGxXdW1hRC9EeTUreTY4M0NnPT0iLCJ1c2FnZV9wb2xpY3kiOiJVSEQifV19LCJjb250ZW50X2tleV91c2FnZV9wb2xpY2llcyI6W3sibmFtZSI6IlNEX0hEIiwid2lkZXZpbmUiOnsiZGV2aWNlX3NlY3VyaXR5X2xldmVsIjoiU1dfU0VDVVJFX0NSWVBUTyJ9LCJwbGF5cmVhZHkiOnsibWluX2RldmljZV9zZWN1cml0eV9sZXZlbCI6MTUwfSwiZmFpcnBsYXkiOnsiaGRjcCI6Ik5PTkUiLCJhbGxvd19haXJwbGF5Ijp0cnVlLCJhbGxvd19hdl9hZGFwdGVyIjp0cnVlfX0seyJuYW1lIjoiVUhEIiwid2lkZXZpbmUiOnsiZGV2aWNlX3NlY3VyaXR5X2xldmVsIjoiSFdfU0VDVVJFX0FMTCIsImhkY3AiOiIyLjIifSwicGxheXJlYWR5Ijp7Im1pbl9kZXZpY2Vfc2VjdXJpdHlfbGV2ZWwiOjMwMDB9LCJmYWlycGxheSI6eyJoZGNwIjoiVFlQRTEiLCJhbGxvd19haXJwbGF5IjpmYWxzZSwiYWxsb3dfYXZfYWRhcHRlciI6ZmFsc2V9fV19fQ.CDHSim8MgwKCIGm3OnCkAE4_uzBCez9JWZRXWwx890E"
+  }
+ }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "ztor-video",
+  "version": "0.1.0",
+  "description": "Film streaming on Cloudflare: R2 storage, multi-DRM (Widevine, PlayReady, FairPlay) or signed protected URLs, rentals, and synchronized watch parties with the host on WebRTC. One Worker, no origin server.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "migrate": "wrangler d1 migrations apply ztor-video --remote",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "aws4fetch": "^1.0.20"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.0.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.0.0"
+  }
+}
