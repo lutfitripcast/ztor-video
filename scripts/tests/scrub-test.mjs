@@ -1,10 +1,11 @@
 // Host scrubs the progress bar (a burst of seeks) while playing and while paused, with the camera on and off; measures
-// viewer minus host afterwards. Also: host page reload while playing. Needs Chrome + wrangler. BASE_URL overrides the Worker.
+// viewer minus host afterwards. Also: host page reload while playing. Needs Chrome + wrangler. BASE_URL overrides the Worker; WRANGLER_CONFIG or WRANGLER_PROFILE pick the account.
 import { chromium } from "playwright";
 import { execSync } from "node:child_process";
 const ROOT = new URL("../..", import.meta.url).pathname;
 const B = process.env.BASE_URL ?? "https://ztor-video.mluthfi840.workers.dev";   // HOST_RULES pins its address on networks whose DNS hijacks workers.dev
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const WR = `npx wrangler d1 execute ztor-video${process.env.WRANGLER_CONFIG ? " -c " + process.env.WRANGLER_CONFIG : ""} --remote`, WENV = { env: { ...process.env, ...(process.env.WRANGLER_PROFILE ? { XDG_CONFIG_HOME: process.env.WRANGLER_PROFILE } : {}) } };   // WRANGLER_CONFIG / WRANGLER_PROFILE pick the account
 const tag = Date.now().toString(36);
 const launchArgs = ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream", "--autoplay-policy=no-user-gesture-required"]; if (process.env.HOST_RULES) launchArgs.push(`--host-resolver-rules=${process.env.HOST_RULES}`);
 const browser = await chromium.launch({ channel: "chrome", headless: true, args: launchArgs });
@@ -15,7 +16,7 @@ const waitLog = async (p, re, ms = 30000) => { const t0 = Date.now(); while (Dat
 const H = await page(); await register(H, "Host " + tag, `scrub-host-${tag}@example.com`);
 const hostCdp = await H.context().newCDPSession(H); await hostCdp.send("Network.enable");
 const throttleHost = (on) => hostCdp.send("Network.emulateNetworkConditions", on ? { offline: false, latency: 700, downloadThroughput: 4e6 / 8, uploadThroughput: 2e6 / 8 } : { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
-execSync(`npx wrangler d1 execute ztor-video --remote --command "UPDATE users SET role='host' WHERE email='scrub-host-${tag}@example.com'"`, { cwd: ROOT, stdio: "ignore" });
+execSync(`${WR} --command "UPDATE users SET role='host' WHERE email='scrub-host-${tag}@example.com'"`, { cwd: ROOT, stdio: "ignore", ...WENV });
 const V = await page(); await register(V, "Viewer " + tag, `scrub-view-${tag}@example.com`);
 await H.reload(); await H.waitForSelector("#bHost", { timeout: 20000 }); await H.click("#bHost"); await H.waitForSelector("#hGo"); await H.fill("#hTitle", "Scrub " + tag); await H.click("#hGo");
 if (!await waitLog(H, /joined .* as host/)) throw new Error("host did not join");
@@ -96,4 +97,4 @@ await sleep(6000); const ended2 = await V.evaluate(() => ({ t: document.getEleme
 console.log(`host ends party at ${hBefore.t.toFixed(1)} s (host ${hBefore.paused ? "paused" : "playing"}) | viewer 1.5 s later: ${ended.t} s paused=${ended.paused} badge ${ended.badge} clock "${ended.clk}" screen ${ended.screen} | 7.5 s later: ${ended2.t} s paused=${ended2.paused}`);
 { const fs = await import("node:fs"); const out = new URL("./out", import.meta.url).pathname; fs.mkdirSync(out, { recursive: true }); fs.writeFileSync(`${out}/viewer-log.txt`, await logOf(V)); fs.writeFileSync(`${out}/host-log.txt`, await logOf(H)); console.log("logs saved to scripts/tests/out/"); }
 await browser.close();
-execSync(`npx wrangler d1 execute ztor-video --remote --command "DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'scrub-%@example.com'); DELETE FROM party_tickets WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'scrub-%@example.com'); DELETE FROM rentals WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'scrub-%@example.com'); UPDATE parties SET status='ended' WHERE host_id IN (SELECT id FROM users WHERE email LIKE 'scrub-%@example.com') AND status!='ended'; DELETE FROM users WHERE email LIKE 'scrub-%@example.com'"`, { cwd: ROOT, stdio: "ignore" });
+execSync(`${WR} --command "DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'scrub-%@example.com'); DELETE FROM party_tickets WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'scrub-%@example.com'); DELETE FROM rentals WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'scrub-%@example.com'); UPDATE parties SET status='ended' WHERE host_id IN (SELECT id FROM users WHERE email LIKE 'scrub-%@example.com') AND status!='ended'; DELETE FROM users WHERE email LIKE 'scrub-%@example.com'"`, { cwd: ROOT, stdio: "ignore", ...WENV });
