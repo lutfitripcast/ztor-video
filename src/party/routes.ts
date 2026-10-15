@@ -9,6 +9,7 @@
 //   POST /party/{id}/rtc/pull        viewer pulls the host's tracks                     (ticket, not kicked)
 //   PUT  /party/{id}/rtc/renegotiate answer to an SFU-initiated offer                   (ticket)
 //   PUT  /party/{id}/rtc/close       host stops tracks                                  (host ticket)
+//   PUT  /party/{id}/rtc/tracks      host re-announces its live tracks after a reconnect (host ticket)
 //   POST /party/{id}/end             host ends the party                                (host ticket)
 //   GET  /party/{id}/messages        chat archive from D1
 import type { Env } from "../lib/env";
@@ -103,7 +104,7 @@ export async function handleParty(req: Request, env: Env, url: URL, seg: string[
     const base = `${url.origin}/media/${party.film_id}/v${party.film_version}/url`;
     const wsOrigin = url.origin.replace(/^http/, "ws");
     return json({ token, expiresInS: ttl, role, partyId, title: party.title, filmId: party.film_id, filmTitle: party.film_title, hostId: party.host_id, you: { id: who.id, name: who.name },
-      ws: `${wsOrigin}/party/${partyId}/ws?t=${token}`, dash: `${base}/manifest.mpd?t=${token}`, hls: `${base}/master.m3u8?t=${token}`,
+      ws: `${wsOrigin}/party/${partyId}/ws?t=${token}`, hls: `${base}/master.m3u8?t=${token}`,
       realtime: sfuConfigured(env), viewers: s.viewers ?? 0, hostLive: !!s.hostTracks,
       policy: { maxHeight: 1080, reason: "protected-URL version: no DRM, so no HDCP; capped at 1080p", sync: role === "host" ? "you drive the clock" : "your player follows the host's clock" } });
   }
@@ -147,6 +148,13 @@ export async function handleParty(req: Request, env: Env, url: URL, seg: string[
       if (req.method === "POST" && op === "session") {
         const [s, ice] = await Promise.all([newSession(env), iceServers(env, Number(env.JWT_TTL_S))]);
         return json({ sessionId: s.sessionId, iceServers: ice, role: isHost ? "host" : "viewer" });
+      }
+      // the host re-announces its live tracks after its room socket reconnected (the room may have retracted them meanwhile)
+      if (req.method === "PUT" && op === "tracks") {
+        if (!isHost) return err("only the host announces tracks", 403);
+        const tracks = liveTracks(body.tracks);
+        await roomPost(env, partyId, "tracks", { tracks });
+        return json({ ok: true, tracks });
       }
       if (!sid) return err("sessionId required", 400);
       if (req.method === "POST" && op === "publish") {

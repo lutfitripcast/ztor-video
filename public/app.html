@@ -55,6 +55,8 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
   #gate{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6)}
   #gate button{font-size:17px;padding:13px 24px}
+  #hold{position:absolute;inset:0;width:100%;height:100%;display:none;background:#000;object-fit:contain;z-index:2}
+  #over{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000;color:#fff;font-size:22px;font-weight:700;letter-spacing:.3px;z-index:3}
   .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
   .ctl{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
   .chat{display:flex;flex-direction:column;height:640px}
@@ -99,6 +101,19 @@
 // ---- shared helpers -------------------------------------------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const BUILD = '20261015-023403';   // stamped at deploy by scripts/stamp-build.mjs
+let staleReloadAt = 0;
+async function checkBuild(where) {
+  try {
+    const r = await fetch('/health', { cache: 'no-store' }); const j = await r.json();
+    if (!j.build || j.build === BUILD || BUILD === 'dev' || staleReloadAt) return;
+    staleReloadAt = Date.now();
+    const isHostHere = /#\/party\//.test(location.hash) && document.getElementById('bCam');
+    toast(isHostHere ? 'A newer version of this page is available. Reloading in 10 s; the party pauses briefly.' : 'A newer version of this page is available. Reloading in 3 s.', 'bad');
+    setTimeout(() => location.reload(), isHostHere ? 10000 : 3000);
+  } catch {}
+}
+checkBuild('load'); setInterval(() => checkBuild('timer'), 5 * 60 * 1000);
 const api = async (method, path, body, headers = {}) => {
   const r = await fetch(path, { method, headers: { 'content-type': 'application/json', ...headers }, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
   let j = null; try { j = await r.clone().json(); } catch { j = await r.text(); }
@@ -260,8 +275,10 @@ routes.watch = async ([filmId]) => {
     player = new shaka.Player(); await player.attach($('v'));
     const urlMode = pass.mode === 'url', vd = urlMode ? null : pass.vendorDrm;
     const drmCfg = urlMode ? {} : vd ? { servers: { 'com.widevine.alpha': vd.widevine, 'com.microsoft.playready': vd.playready, 'com.apple.fps': vd.fairplay }, advanced: { 'com.apple.fps': { serverCertificateUri: vd.fairplayCertificate } } } : { servers: { 'org.w3.clearkey': pass.licenseUrl } };
-    const manifestUrl = urlMode ? (isSafari ? pass.hls : pass.dash) : vd && isSafari ? pass.hls : pass.dash.split('?')[0];
-    log(urlMode ? 'protection: signed URL only, no license requests' : `key system: ${vd ? (isSafari ? 'FairPlay (HLS)' : 'Widevine/PlayReady (DASH)') + ' via ' + vd.vendor : 'ClearKey'}`);
+    // HLS only (2026-10-13, user's decision): Safari decrypts with FairPlay, Chrome/Edge/Android with Widevine or PlayReady,
+    // all from the same cbcs segments; the playlists carry all three key systems. DASH is no longer packaged or served.
+    const manifestUrl = pass.hls;
+    log(urlMode ? 'protection: signed URL only, no license requests (HLS)' : `key system: ${vd ? (isSafari ? 'FairPlay' : 'Widevine/PlayReady') + ' over HLS via ' + vd.vendor : 'ClearKey over HLS'}`);
     // Prefer the key system this browser actually has. Without this, Shaka's polyfills make it probe only PlayReady for
     // cbcs films on Chrome/Edge (which have no PlayReady) and fail with 6001 before ever trying Widevine (found 2026-09-24).
     const preferredKeySystems = isSafari ? ['com.apple.fps'] : ['com.widevine.alpha', 'com.microsoft.playready'];
@@ -272,8 +289,12 @@ routes.watch = async ([filmId]) => {
     net.registerRequestFilter((type, req) => { if (type === T.MANIFEST || type === T.LICENSE) req.headers['Authorization'] = 'Bearer ' + pass.token; if (type === T.LICENSE) { lic++; $('lic').textContent = lic; } });
     net.registerResponseFilter((type, resp) => { if (type === T.LICENSE) log(`license response ${resp.data.byteLength} bytes (opaque, key stays in the DRM module)`); });
     const v = $('v');
-    v.addEventListener('playing', () => $('st').textContent = 'playing'); v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; });
-    player.addEventListener('error', (e) => { log(`shaka error ${e.detail.code} ${e.detail.message || ''} data=${JSON.stringify(e.detail.data).slice(0, 300)}`); $('st').textContent = 'error'; toast(`Playback error ${e.detail.code}`, 'bad'); });
+    let stallTimer = null, capUntil = 0;
+  const capLow = (why) => { if (isHost || !player) return; const t = player.getVariantTracks().find(t => t.active); capUntil = Date.now() + 30000; player.configure({ abr: { restrictions: { maxHeight: 480 } } }); log(`stall guard: ${why} at ${t ? t.height + 'p' : '?'}; capped at 480p for 30 s so the next segment is small`); $('res').textContent += ' (capped)'; setTimeout(() => { if (Date.now() >= capUntil && player) { capUntil = 0; player.configure({ abr: { restrictions: { maxHeight: Infinity } } }); log('stall guard: cap lifted, automatic quality again'); } }, 30000); };
+  v.addEventListener('waiting', () => { if (isHost || v.paused) return; recentStallAt = Date.now(); clearTimeout(stallTimer); stallTimer = setTimeout(() => { if (!v.paused && v.readyState < 3 && clock?.state === 'playing' && !capUntil) capLow('picture stopped for 1 s'); }, 1000); });
+  v.addEventListener('playing', () => { clearTimeout(stallTimer); $('st').textContent = 'playing'; }); v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; });
+    const thisPlayer = player;   // a replaced player (version switch) can still report late errors from its last operations: ignore them
+    player.addEventListener('error', (e) => { if (thisPlayer !== player) return; log(`shaka error ${e.detail.code} ${e.detail.message || ''} data=${JSON.stringify(e.detail.data).slice(0, 300)}`); $('st').textContent = 'error'; toast(`Playback error ${e.detail.code}`, 'bad'); });
     player.addEventListener('keystatuschanged', () => log(`key statuses: ${JSON.stringify(player.getKeyStatuses())}`));
     const showActive = () => { const t = player.getVariantTracks().find(t => t.active); if (t) $('res').textContent = `${t.width}x${t.height} @ ${(t.bandwidth / 1e6).toFixed(1)} Mbps`; };
     let lockedNote = null, lockedChecked = false;   // set when a rung exists in the manifest but was not unlocked
@@ -341,12 +362,12 @@ routes.party = async ([partyId]) => {
   }
   if (j.status !== 200) { toast(j.body.error || `could not join (${j.status})`, 'bad'); location.hash = '#/home'; return; }
   const P_ = j.body; const isHost = P_.role === 'host';
-  $('view').innerHTML = `<div class="bar"><a href="#/home">&larr; Home</a><span class="badge" id="bLive">OFFLINE</span><h1 style="margin:0;font-size:20px">${esc(P_.title)}</h1><span class="dim">${esc(P_.filmTitle)}</span><span style="flex:1"></span><span><b id="viewers">0</b> <span class="dim">watching</span></span><span class="dim" id="sync"></span></div>
+  $('view').innerHTML = `<div class="bar"><a href="#/home">&larr; Home</a><span class="badge" id="bLive">CONNECTING</span><h1 style="margin:0;font-size:20px">${esc(P_.title)}</h1><span class="dim">${esc(P_.filmTitle)}</span><span style="flex:1"></span><span><b id="viewers">0</b> <span class="dim">watching</span></span><span class="dim" id="sync"></span></div>
     <div class="stage"><div>
       <div class="card">
-        <div class="screen"><video id="v" playsinline ${isHost ? 'controls' : ''}></video><video id="cam" autoplay playsinline muted></video><span id="micPill"><i></i> host mic on</span><audio id="hostAudio" autoplay></audio><div id="gate"><button id="bGate" class="primary">Tap to watch with sound</button></div></div>
+        <div class="screen"><video id="v" playsinline ${isHost ? 'controls' : 'disablepictureinpicture controlslist="nodownload noplaybackrate"'}></video><video id="cam" autoplay playsinline muted></video><span id="micPill"><i></i> host mic on</span><audio id="hostAudio" autoplay></audio><canvas id="hold"></canvas><div id="over">Watch party ended</div><div id="gate"><button id="bGate" class="primary">Tap to watch with sound</button></div></div>
         ${isHost ? `<div class="ctl"><button id="bCam">Camera</button><button id="bMic">Mic only</button><span style="flex:1"></span><button id="bEnd" class="danger">End party</button></div>` : ''}
-        <div class="row" style="margin-top:10px"><span>player <b id="st">idle</b></span><span>quality <b id="res">-</b></span><span>clock <b id="clk">-</b></span><span>host feed <b id="rtc">-</b></span><span>host bitrate <b id="kbps">-</b></span></div>
+        <div class="row" style="margin-top:10px"><span>player <b id="st">idle</b></span><span>quality <b id="res">-</b></span><span>clock <b id="clk">-</b></span><span>host feed <b id="rtc">-</b></span><span>host bitrate <b id="kbps">-</b></span><span>frames <b id="frames">-</b></span></div>
         <details class="log"><summary>Details and log</summary>
           ${isHost ? `<div class="checks"><div><span>Join without a ticket should be refused</span><span id="c1">-</span></div><div><span>Viewer cannot move the clock</span><span id="c2">-</span></div><div><span>Viewer cannot publish camera / mic</span><span id="c3">-</span></div><div><span>Party ticket does not open another film</span><span id="c4">-</span></div><div><span>Chat rate limit holds</span><span id="c5">-</span></div><div><span>Kicked viewer cannot rejoin</span><span id="c6">-</span></div></div><div class="ctl"><button id="bChecks" class="sm">Run security checks</button></div><p class="hint">Checks need TEST_MODE on the server (a throwaway viewer rents, joins and misbehaves).</p>` : ''}
           <pre id="log"></pre></details>
@@ -362,6 +383,7 @@ routes.party = async ([partyId]) => {
 // The party runtime. Same protocol as before: WebSocket room (chat, clock, pins), Realtime SFU for the host's tracks
 // with one PeerConnection per publish group and simulcast a/b/c, viewers follow the host's clock.
 async function runParty(me_, isHost) {
+  checkBuild('party');
   const P = (path) => `/party/${me_.partyId}${path}`;
   const auth = () => ({ Authorization: 'Bearer ' + me_.token });
   let ws = null, player = null, clock = null, offset = 0, userStarted = isHost, hostTracks = null, wsRetry = 0, closed = false;
@@ -371,79 +393,177 @@ async function runParty(me_, isHost) {
   // film
   shaka.polyfill.installAll();
   player = new shaka.Player(); await player.attach($('v'));
-  player.configure({ restrictions: { maxHeight: me_.policy.maxHeight }, streaming: { bufferingGoal: 20, rebufferingGoal: 2, useNativeHlsForFairPlay: false } });
+  // Quality selection tuned for a connection that drops mid-film (2026-10-10): switch every 2 s instead of 8, step down at 80% of
+  // measured bandwidth, keep 30 s buffered, prefetch the next segment. Shaka aborts a segment in flight when a lower rung would finish sooner.
+  // Safari (2026-10-14): Safari's own HLS player was tried for the party and rejected the same day: it picks the rung by the size of
+  // the video box (480p in a card) and re-buffers after every seek, so viewers fell behind. Every browser uses Shaka's pipeline;
+  // what made Safari stutter was the speed changes, which the Safari controller below no longer makes.
+  const nativeHls = false;
+  // Safari hitches for about half a second on every quality switch, so it switches rarely (8 s apart, up only at 70% of measured
+  // bandwidth) and climbs once to the rung it can hold; Chrome switches seamlessly and keeps the fast settings for dropping links.
+  player.configure({ restrictions: { maxHeight: me_.policy.maxHeight }, abr: isSafari ? { switchInterval: 8, bandwidthDowngradeTarget: 0.85, bandwidthUpgradeTarget: 0.7 } : { switchInterval: 2, bandwidthDowngradeTarget: 0.8, bandwidthUpgradeTarget: 0.9 }, streaming: { bufferingGoal: 60, rebufferingGoal: 1, segmentPrefetchLimit: 3, useNativeHlsForFairPlay: false, preferNativeHls: nativeHls } });   // 60 s ahead, 3 segments in flight: rides through the 10 s delivery gaps seen on a viewer's link (2026-10-14)
   player.addEventListener('error', (e) => { log(`shaka error ${e.detail.code} ${e.detail.message || ''}`); $('st').textContent = 'error'; });
-  const showActive = () => { const t = player?.getVariantTracks().find(t => t.active); if (t) $('res').textContent = `${t.height}p ${(t.bandwidth / 1e6).toFixed(1)} Mbps`; };
+  const showActive = () => { if (nativeHls) { $('res').textContent = `${v.videoHeight || '?'}p (Safari native HLS)`; return; } const t = player?.getVariantTracks().find(t => t.active); if (t) $('res').textContent = `${t.height}p ${(t.bandwidth / 1e6).toFixed(1)} Mbps`; };
   player.addEventListener('adaptation', showActive); player.addEventListener('variantchanged', showActive);
+  player.addEventListener('adaptation', (e) => { const o = e.oldTrack, n = e.newTrack; if (o && n) log(`quality switch: ${o.height}p -> ${n.height}p (automatic)`); });
+  // Segment delivery timing (2026-10-14): how long each film segment takes to arrive from the Worker, and which Cloudflare site
+  // answered, so a slow path to the Worker can be told apart from a thin link.
+  const segStats = { times: [], bytes: 0, colo: null };
+  player.getNetworkingEngine().registerResponseFilter((type, resp) => { if (type !== shaka.net.NetworkingEngine.RequestType.SEGMENT) return; segStats.times.push(resp.timeMs || 0); segStats.bytes += resp.data?.byteLength || 0; if (!segStats.colo) { const ray = resp.headers?.['cf-ray'] || ''; if (ray) { segStats.colo = ray.split('-')[1] || '?'; log(`segments are served by Cloudflare site ${segStats.colo}`); } } });
   const v = $('v');
-  v.addEventListener('playing', () => $('st').textContent = 'playing'); v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; }); v.addEventListener('waiting', () => $('st').textContent = 'buffering');
-  try { $('st').textContent = 'loading'; await player.load(isSafari ? me_.hls : me_.dash); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, protected-URL, no license requests`); } catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
+  if (nativeHls) v.addEventListener('resize', showActive);
+  let stallTimer = null, capUntil = 0;
+  const capLow = (why) => { if (isHost || !player || nativeHls) return; const t = player.getVariantTracks().find(t => t.active); capUntil = Date.now() + 30000; player.configure({ abr: { restrictions: { maxHeight: 480 } } }); log(`stall guard: ${why} at ${t ? t.height + 'p' : '?'}; capped at 480p for 30 s so the next segment is small`); $('res').textContent += ' (capped)'; setTimeout(() => { if (Date.now() >= capUntil && player) { capUntil = 0; player.configure({ abr: { restrictions: { maxHeight: Infinity } } }); log('stall guard: cap lifted, automatic quality again'); } }, 30000); };
+  v.addEventListener('waiting', () => { if (isHost || v.paused) return; recentStallAt = Date.now(); clearTimeout(stallTimer); stallTimer = setTimeout(() => { if (!v.paused && v.readyState < 3 && clock?.state === 'playing' && !capUntil) capLow('picture stopped for 1 s'); }, 1000); });
+  v.addEventListener('playing', () => { clearTimeout(stallTimer); $('st').textContent = 'playing'; }); v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; }); v.addEventListener('waiting', () => $('st').textContent = 'buffering');
+  try { $('st').textContent = 'loading'; await player.load(me_.hls); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, protected-URL over HLS, no license requests`); } catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
   if (!isHost) $('gate').style.display = 'flex';
-  $('bGate').onclick = () => { userStarted = true; $('gate').style.display = 'none'; v.muted = false; v.play().catch(() => {}); $('cam').play().catch(() => {}); $('hostAudio').play().catch(() => {}); };
+  $('bGate').onclick = () => { userStarted = true; $('gate').style.display = 'none'; v.muted = false; if (clock?.state === 'playing' && !linkDown) v.play().catch(() => {}); else { v.pause(); $('st').textContent = clock ? 'waiting for host' : 'connecting to room'; } $('cam').play().catch(() => {}); $('hostAudio').play().catch(() => {}); };
+  // A viewer's film plays only on the host's clock. Anything else that starts it (native controls in fullscreen, picture in
+  // picture, a stray play()) is paused at once (2026-10-14: a viewer whose room socket never opened could play freely).
+  if (!isHost) v.addEventListener('play', () => { if (partyOver || linkDown || !clock || clock.state !== 'playing' || ws?.readyState !== 1) { v.pause(); $('st').textContent = partyOver ? 'ended' : !clock || ws?.readyState !== 1 ? 'connecting to room' : 'waiting for host'; } });
 
   // clock
   const wsSend = (m) => { if (ws?.readyState === 1) ws.send(JSON.stringify(m)); };
-  // Sync, reworked 2026-10-01 after a real test showed viewers 1-2 s behind the host:
-  //  - the host stamps the clock in room time (its own offset), so the uplink latency no longer shifts every viewer;
-  //  - the host reports every second and on 'playing' / 'waiting' too (a frozen host picture counts as paused), not
-  //    on 'play' alone, which fires before the picture moves;
-  //  - viewers apply a clock the moment it arrives, tick 4 times a second, always land on the host's exact frame when
-  //    paused, correct proportionally up to 10% speed above one frame (0.04 s) of error, and seek above 1 s.
-  let hostRttMs = 0;   // the host's round trip to the SFU, sent with every clock
-  const hostState = () => (v.paused || v.ended || v.readyState < 3) ? 'paused' : 'playing';
-  const sendClock = () => { const state = hostState(); wsSend({ t: 'clock', state, position: v.currentTime, rate: v.playbackRate, at: Date.now() + offset, rtt: hostRttMs }); $('clk').textContent = `${state} @ ${v.currentTime.toFixed(1)} s (you)`; };
-  if (isHost) { ['play', 'playing', 'pause', 'seeked', 'waiting', 'ratechange', 'ended'].forEach(ev => v.addEventListener(ev, sendClock)); timers.push(setInterval(() => { if (!v.paused) sendClock(); }, 1000)); }
-  // Voice alignment (2026-10-01): the host's voice reaches a viewer through the SFU some 0.3-0.5 s after the clock does, so a
-  // viewer replays the host's timeline delayed by that much: the frame the host talks about appears as the words arrive.
-  // The delay is host half round trip + viewer half round trip + the viewer's audio jitter buffer + 80 ms for codecs and the
-  // SFU, measured from WebRTC stats every 2 s and smoothed; it is 0 when no host audio is being received.
-  let voiceMs = 0, clockQ = [];
-  const vnow = () => Date.now() + offset - voiceMs;
-  // A clock is held for the voice delay minus the time it already spent in transit, measured from its local arrival, so a
-  // wrong offset estimate can delay it by at most the voice delay and never hold it back indefinitely.
-  const takeClock = (c) => { if (isHost) { clock = c; return; } const transit = (Date.now() + offset) - c.at; c.applyAt = Date.now() + Math.max(0, Math.min(voiceMs, voiceMs - transit)); clockQ.push(c); clockQ.sort((a, b) => a.applyAt - b.applyAt); pickClock(); syncTick(); };
-  const pickClock = () => { const t = Date.now(); let i = -1; for (let k = 0; k < clockQ.length; k++) if (clockQ[k].applyAt <= t) i = k; if (i >= 0) { clock = clockQ[i]; clockQ.splice(0, i); } };
-  const expected = () => { if (!isHost) pickClock(); return !clock ? null : clock.state === 'playing' ? clock.position + (vnow() - clock.at) / 1000 * clock.rate : clock.position; };
-  let seekedFor = 0, lastSeekAt = 0;   // seekedFor: clock.at of the paused clock we last seeked to; lastSeekAt: no re-seek while the buffer refills
+  // Sync (reworked 2026-10-01 and 2026-10-09). The room stamps every clock on arrival minus the host's best one-way latency
+  // and sends the room time with it; a viewer turns that into a local time without any clock offset (its own best one-way
+  // latency is the only estimate involved), so a congested network on either side cannot push a viewer ahead of the host.
+  // Host: reports every second (paused too) and on play / playing / pause / seeking / seeked / waiting / ratechange / ended; a
+  // frozen picture counts as paused. Viewer: pauses and seeks apply the moment they arrive; the playing timeline is delayed by
+  // the voice delay (section 6.1 of the report); errors are corrected at up to 10% speed, 25% above 0.3 s, a seek above 1 s.
+  let hostRttMs = 0;   // the host's round trip to the SFU, sent with every clock (voice alignment)
+  let bestPing = null;   // lowest ping round trip to the room in the last 60 s; half of it is our one-way latency estimate
+  const oneWay = () => bestPing ? bestPing.rtt / 2 : 0;
+  // Host state comes from motion, not from readyState or events: the picture counts as playing only while currentTime has
+  // advanced within the last 150 ms (polled every 50 ms). Decoder ramps after a seek, stalls the browser does not flag, and
+  // 'playing' events that precede real motion are all reported as paused/buffering, so viewers wait instead of running ahead.
+  let motion = { t: -1, at: 0 }, wasMoving = false, pollAt = 0, pollGap = 50;
+  // The stall threshold follows the real poll interval: 150 ms (about 3 frames) in a visible tab, longer when the browser
+  // throttles timers in a background tab, so a backgrounded host is never mistaken for a stalled one.
+  const moving = () => Date.now() - motion.at < Math.max(150, pollGap * 1.5 + 50);
+  const hostState = () => (v.paused || v.ended || v.seeking || !moving()) ? 'paused' : 'playing';
+  // Motion is a small forward advance of currentTime (up to 0.5 s per 50 ms poll). A jump, forward or back, is a seek, not
+  // motion: a drag changes currentTime with every step and must be reported as paused, not as playing at each step.
+  if (isHost) timers.push(setInterval(() => { const now = Date.now(); pollGap = pollAt ? now - pollAt : 50; pollAt = now; const t = v.currentTime, dt = t - motion.t, el = pollGap / 1000 * Math.max(1, v.playbackRate || 1); if (dt !== 0) { if (!v.seeking && dt > 0 && dt <= el * 2 + 0.1) motion = { t, at: now }; else motion = { t, at: 0 }; } const m = !v.paused && !v.ended && !v.seeking && moving(); if (m !== wasMoving) { wasMoving = m; sendClock(); } }, 50));
+  let hostReady = !isHost, pingKnown = false;   // host: no clock leaves this page until a ping is answered and the player is positioned (reload case)
+  let lastSend = 0, sendTimer = null;
+  let lastSentState = '', lastSentPos = -1;
+  const sendClock = () => { if (!hostReady || !pingKnown) return; const dt = Date.now() - lastSend; if (dt < 80) { if (!sendTimer) sendTimer = setTimeout(() => { sendTimer = null; sendClock(); }, 80 - dt); return; } lastSend = Date.now(); const state = hostState(); if (state !== lastSentState || Math.abs(v.currentTime - lastSentPos) > 2) log(`sent clock: ${state}${state === 'paused' && !v.paused ? ' (buffering)' : ''} @ ${v.currentTime.toFixed(2)} s`); lastSentState = state; lastSentPos = v.currentTime; wsSend({ t: 'clock', state, position: v.currentTime, rate: v.playbackRate, up: Math.round(oneWay()), rtt: hostRttMs, why: state === 'paused' && !v.paused && !v.ended ? 'buffering' : undefined }); $('clk').textContent = `${state} @ ${v.currentTime.toFixed(1)} s (you)`; };
+  if (isHost) { ['play', 'playing', 'pause', 'seeking', 'seeked', 'waiting', 'ratechange', 'ended'].forEach(ev => v.addEventListener(ev, sendClock)); timers.push(setInterval(sendClock, 1000)); }
+  let voiceMs = 0, clockQ = [], scrub = { pos: -1, at: 0 };   // scrub: last position change while paused, for the 1 s settle
+  const LAG_MIN_MS = isSafari ? 300 : 150;   // Safari: wider margin; it runs at rate 1 and is corrected only by a rare seek   // viewers run at least this far behind the host while playing: a host stall is detected within ~150 ms + transit, so a viewer can pass the host's frozen frame by a frame or two at most
+  const lagMs = () => Math.max(LAG_MIN_MS, voiceMs);
+  // c.local = the local time that corresponds to the room stamp c.at: arrival, minus the clock's age at send (room clock
+  // against room clock), minus our one-way latency. A playing clock joins the delayed timeline at c.local + voiceMs; a
+  // paused clock (a pause or a scrub step) applies at once, so every viewer lands on the host's frame immediately.
+  const takeClock = (c, s) => {
+    const now = Date.now(); c.local = now - Math.max(0, (s ?? now) - c.at) - oneWay();
+    if (isHost) { clock = c; if (!hostReady && pingKnown) { hostReady = true; const pos = c.state === 'playing' ? c.position + (now - c.local) / 1000 * c.rate : c.position; if (pos > 0.5 && !isNaN(v.duration)) { v.currentTime = Math.min(pos, v.duration); const m = Math.floor(pos / 60), ss = String(Math.floor(pos % 60)).padStart(2, '0'); toast(`Resumed at ${m}:${ss}. Press play to continue.`); log(`host page back: player set to ${pos.toFixed(1)} s from the room's clock, paused`); } } return; }
+    if (clock && c.at < clock.at) return;
+    // paused clocks: a pause coming from playing lands at once (the host stopped on a scene); a further move while paused is
+    // a scrub, and viewers must not flick through the preview frames, so it applies only once the host has been still for 1 s
+    // The settle timer runs from the last change of position, so the host's 1 s heartbeat and the second report of each
+    // seek (the browser reports a seek when it starts and when it finishes) do not keep pushing it back.
+    const scrubStep = c.state === 'paused' && clock && clock.state === 'paused' && Math.abs(c.position - clock.position) > 0.05;
+    if (scrubStep) { if (Math.abs(c.position - scrub.pos) > 0.05) scrub = { pos: c.position, at: now }; coverShow(); }
+    c.applyAt = c.state === 'playing' ? Math.max(now, c.local + lagMs()) : now;
+    clockQ.push(c); pickClock(); syncTick();
+  };
+  // While the host drags, the film follows every step underneath a snapshot of the frame it was showing, so the buffer is ready
+  // at the destination and viewers see no preview frames. The snapshot goes when the host has been still for 1 s or plays.
+  let coverTimer = null;
+  const coverShow = () => { const h = $('hold'); if (h.style.display !== 'block' && v.videoWidth) { h.width = v.videoWidth; h.height = v.videoHeight; try { h.getContext('2d').drawImage(v, 0, 0, h.width, h.height); h.style.display = 'block'; } catch {} } clearTimeout(coverTimer); coverTimer = setTimeout(coverHide, 1000); };
+  const coverHide = () => { clearTimeout(coverTimer); coverTimer = null; $('hold').style.display = 'none'; };
+  const pickClock = () => { const t = Date.now(); let best = null; for (const c of clockQ) if (c.applyAt <= t && (!best || c.at > best.at)) best = c; if (best) { clock = best; clockQ = clockQ.filter(c => c.at > best.at); } };
+  const expected = () => { if (!isHost) pickClock(); return !clock ? null : clock.state === 'playing' ? clock.position + (Date.now() - clock.local - lagMs()) / 1000 * clock.rate : clock.position; };
+  let seekedFor = 0, lastSeekAt = 0, lastFollowLog = 0, lastPreSeek = 0, recentStallAt = 0, lastRateAt = 0, safariLead = 0.4, safariPending = false;   // seekedFor: clock.at of the paused clock we last seeked to; lastSeekAt: no re-seek while the buffer refills
+  let partyOver = false, linkDown = false, lastRoomMsgAt = 0;   // linkDown: the room socket is closed or silent; the film waits
+  const endParty = (why) => { if (partyOver) return; partyOver = true; clockQ = []; try { v.pause(); } catch {} v.playbackRate = 1; $('gate').style.display = 'none'; $('over').style.display = 'flex'; $('cam').style.display = 'none'; $('micPill').style.display = 'none'; (async () => { try { await player?.unload(); } catch {} })(); if (!isHost) clearRemote(); setLive(null, false); $('bLive').textContent = 'ENDED'; $('bLive').className = 'badge'; $('clk').textContent = `ended @ ${v.currentTime.toFixed(1)} s`; addSys(why); toast(`${why} The film is paused.`); log(`party over: ${why}`); };
   const syncTick = () => {
+    if (partyOver) { if (!v.paused) v.pause(); return; }
+    if (!isHost && (!clock || ws?.readyState !== 1)) { if (!v.paused) v.pause(); $('st').textContent = ws?.readyState === 1 ? 'waiting for host' : 'connecting to room'; return; }
     if (!clock || !player || isNaN(v.duration)) return;
+    // no live link to the room (socket closed, or silent for 15 s while the host should be sending every second): wait, do not extrapolate
+    if (!isHost && clock.state === 'playing' && (linkDown || ws?.readyState !== 1 || Date.now() - lastRoomMsgAt > 15000)) { if (!v.paused) { v.pause(); log('room link down: film paused until the room is back'); } $('st').textContent = 'reconnecting'; return; }
     const exp = Math.min(expected(), v.duration), d = v.currentTime - exp;
-    $('clk').textContent = `${clock.state} @ ${exp.toFixed(1)} s${voiceMs ? `, voice +${(voiceMs / 1000).toFixed(2)} s` : ''}`; $('sync').textContent = `sync ${d >= 0 ? '+' : ''}${d.toFixed(2)} s`;
-    if (clock.state === 'paused') { if (!v.paused) v.pause(); v.playbackRate = 1; if (Math.abs(d) > 0.05 && seekedFor !== clock.at) { seekedFor = clock.at; v.currentTime = exp; } return; }
+    $('clk').textContent = `${clock.state} @ ${exp.toFixed(1)} s, behind host by ${(lagMs() / 1000).toFixed(2)} s${voiceMs ? ' (voice)' : ''}`; $('sync').textContent = (() => { const vs = d - lagMs() / 1000; return `vs host ${vs >= 0 ? '+' : ''}${vs.toFixed(2)} s`; })();
+    if (clock.state === 'paused') { if (!v.paused) v.pause(); v.playbackRate = 1; $('st').textContent = clock.why === 'buffering' ? 'host buffering' : clock.why === 'offline' ? 'host offline' : 'paused with host'; if (coverTimer && Date.now() - lastPreSeek < 300) return;   // during a drag: at most ~3 seeks a second, always the latest, so the player is not thrashed
+      if (exp >= v.duration - 1.5 && v.currentTime >= v.duration - 1.5) return;   // host parked at the end of the film: the last frame cannot be reached exactly, do not re-seek every heartbeat
+      if (Math.abs(d) > 0.05 && seekedFor !== clock.at) { seekedFor = clock.at; lastPreSeek = Date.now(); v.currentTime = exp; if (Date.now() - lastFollowLog > 500) { lastFollowLog = Date.now(); log(`follow: host paused at ${exp.toFixed(1)} s, seeking there (was ${(exp + d).toFixed(1)} s)`); } } return; }
     if (!userStarted) { if (Math.abs(d) > 1) v.currentTime = exp; return; }
+    if (coverTimer) coverHide();
     if (v.paused) v.play().catch(() => {});
-    if (Math.abs(d) > 1 && Date.now() - lastSeekAt > 2500) { lastSeekAt = Date.now(); v.currentTime = exp + 0.3; v.playbackRate = 1; log(`resync: was ${d.toFixed(2)} s off, seeked`); }
+    // never lead: a resync seek lands on the expected position; the catch-up below absorbs the buffering time
+    // in the 10 s after our own stall, a gap of up to 3 s is closed at 25% speed rather than by a seek, which would cost another
+    // segment on a struggling link; otherwise anything over 1 s seeks
+    if (!isSafari && Math.abs(d) > (d < 0 && Date.now() - recentStallAt < 10000 ? 3 : 1) && Date.now() - lastSeekAt > 2500) { lastSeekAt = Date.now(); v.currentTime = exp; v.playbackRate = 1; resyncs++; log(`resync: was ${d.toFixed(2)} s off, seeked`); }
+    else if (isSafari) {
+      // Safari (2026-10-14, fifth attempt): a 3% pace neither caught up nor played smoothly (0 dropped frames, full buffer, still
+      // stuttering), so the rate is locked at 1. Drift is tiny at rate 1; a gap over 1 s is closed by one seek with a 0.4 s lead.
+      if (v.playbackRate !== 1) v.playbackRate = 1;
+      if (Math.abs(d) > 1 && Date.now() - lastSeekAt > 3000) { lastSeekAt = Date.now(); v.currentTime = exp + 0.4; resyncs++; log(`resync (Safari): was ${d.toFixed(2)} s off, seeked`); }
+    }
+    else if (Math.abs(d) > 0.3) v.playbackRate = Math.min(1.25, Math.max(0.75, 1 - d));   // big error after a scrub: up to 25% for a second or two
     else if (Math.abs(d) > 0.04) v.playbackRate = Math.min(1.1, Math.max(0.9, 1 - d)); else v.playbackRate = 1;   // 0.04 s = one frame at 24 fps
   };
   if (!isHost) timers.push(setInterval(syncTick, 250));
+  // A draining buffer means the link cannot sustain the current rung: step down before the stall happens, and keep the cap until
+  // the buffer has been healthy for 30 s (2026-10-14: a Safari viewer drained at 720p and 1080p and stalled every half minute
+  // while the ABR, which only looks at download speed, climbed back up).
+  let lastAhead = null, drainStrikes = 0, capHeight = 0, healthySince = 0;
+  const rungs = () => [...new Set(player.getVariantTracks().map(x => x.height))].sort((a, b) => b - a);
+  timers.push(setInterval(() => {
+    if (isHost || !player || nativeHls || v.paused || clock?.state !== 'playing') { lastAhead = null; drainStrikes = 0; return; }
+    let ahead = 0; try { const b = v.buffered; if (b.length) ahead = Math.max(0, b.end(b.length - 1) - v.currentTime); } catch {}
+    const remaining = isNaN(v.duration) ? Infinity : v.duration - v.currentTime;
+    const draining = lastAhead !== null && ahead < lastAhead - 1 && ahead < 30 && ahead < remaining - 2;   // buffered to the end of the film is not draining
+    drainStrikes = draining ? drainStrikes + 1 : 0; lastAhead = ahead;
+    if ((drainStrikes >= 2 || (draining && ahead < 8)) && Date.now() - healthySince > 10000) {
+      const t = player.getVariantTracks().find(x => x.active); const below = rungs().filter(h => t && h < t.height);
+      const target = ahead < 5 && below.length > 1 ? below[1] : below[0];   // nearly dry: two rungs down
+      if (target && target !== capHeight) { capHeight = target; healthySince = Date.now(); player.configure({ abr: { restrictions: { maxHeight: target } } }); log(`buffer guard: buffer draining (${ahead.toFixed(1)} s ahead at ${t.height}p): capped at ${target}p until the buffer holds`); }
+      drainStrikes = 0;
+    }
+    if (capHeight) { if (ahead >= 35) { if (!healthySince) healthySince = Date.now(); if (Date.now() - healthySince > 30000) { capHeight = 0; healthySince = 0; player.configure({ abr: { restrictions: { maxHeight: Infinity } } }); log('buffer guard: buffer healthy for 30 s, cap lifted'); } } else healthySince = Date.now(); }
+  }, 5000));
+  // playback health (2026-10-14, to tell decoder drops from buffering from resyncs): dropped/decoded frames, buffer ahead, seeks
+  let resyncs = 0, lastHealth = '';
+  timers.push(setInterval(() => { if (isHost || !player) return; const q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : { droppedVideoFrames: v.webkitDroppedFrameCount || 0, totalVideoFrames: v.webkitDecodedFrameCount || 0 }; let ahead = 0; try { const b = v.buffered; if (b.length) ahead = Math.max(0, b.end(b.length - 1) - v.currentTime); } catch {} const seg = segStats.times.length ? `, segments ${segStats.times.length} in last 10 s: avg ${(segStats.times.reduce((a, b) => a + b, 0) / segStats.times.length / 1000).toFixed(1)} s, max ${(Math.max(...segStats.times) / 1000).toFixed(1)} s, ${(segStats.bytes / 1e6).toFixed(1)} MB` : ', no segments in last 10 s'; const toEnd = isNaN(v.duration) ? '' : (v.duration - v.currentTime - ahead < 1 ? ' (to the end)' : ''); const txt = `${q.droppedVideoFrames} dropped / ${q.totalVideoFrames}, buffer ${ahead.toFixed(1)} s${toEnd}, resyncs ${resyncs}${seg}`; if (Date.now() % 10000 < 1000) { segStats.times = []; segStats.bytes = 0; } $('frames').textContent = txt; if (Date.now() % 10000 < 1000 && txt !== lastHealth) { lastHealth = txt; log(`health: ${txt}, ${v.videoHeight}p, rate ${v.playbackRate}`); } }, 1000));
+  let wsFailures = 0;
+  if (!isHost) v.addEventListener('seeked', () => { if (v.paused) log(`seeked: now at ${v.currentTime.toFixed(1)} s, paused, readyState ${v.readyState}`); });
+  window.__closeWs = () => ws?.close();   // for scripts/tests
+  window.__sync = () => ({ t: v.currentTime, paused: v.paused, rs: v.readyState, rate: v.playbackRate, clock, exp: expected(), offset, oneWay: oneWay(), voiceMs, queued: clockQ.length, hostReady, pingKnown });   // for scripts/tests
 
   // room
   const connectWs = () => {
     if (closed) return;
     ws = new WebSocket(me_.ws);
-    ws.onopen = () => { wsRetry = 0; log('room connected'); pingTime(); };
-    ws.onmessage = (e) => { if (e.data === 'pong') return; let m; try { m = JSON.parse(e.data); } catch { return; } onRoom(m); };
-    ws.onclose = (e) => { log(`room closed ${e.code} ${e.reason || ''}`); if (closed) return; if (e.code === 4001) { toast('You were removed from this party.', 'bad'); location.hash = '#/home'; } else if (e.code === 4000) { setLive(null, false); $('bLive').textContent = 'ENDED'; } else if (wsRetry < 8) setTimeout(connectWs, Math.min(8000, 500 * 2 ** wsRetry++)); };
+    let opened = false;
+    ws.onopen = () => { opened = true; wsRetry = 0; wsFailures = 0; linkDown = false; lastRoomMsgAt = Date.now(); log('room connected'); pingTime(); };
+    ws.onerror = () => log(`room socket error (readyState ${ws.readyState})`);
+    ws.addEventListener('close', (e) => { if (!opened && !closed) { wsFailures++; log(`room socket did not open (close ${e.code}); attempt ${wsFailures}`); if (wsFailures === 3) toast('Cannot reach the party room from this network. The film stays paused until the room connects.', 'bad'); } });
+    ws.onmessage = (e) => { lastRoomMsgAt = Date.now(); if (e.data === 'pong') return; let m; try { m = JSON.parse(e.data); } catch { return; } onRoom(m); };
+    ws.onclose = (e) => { log(`room closed ${e.code} ${e.reason || ''}`); if (closed) return; if (e.code === 4001) { toast('You were removed from this party.', 'bad'); location.hash = '#/home'; } else if (e.code === 4000) { endParty('The party has ended.'); setLive(null, false); $('bLive').textContent = 'ENDED'; } else { linkDown = true; if (!isHost && !v.paused) { v.pause(); log('room link lost: film paused'); } $('st').textContent = 'reconnecting'; $('bLive').textContent = 'CONNECTING'; $('bLive').className = 'badge'; setTimeout(async () => { if (closed || partyOver) return; const r = await api('GET', P('')); if (r.status === 200 && r.body.status === 'ended') return endParty('The party has ended.'); if (r.status === 404 || r.status === 410) return endParty('The party has ended.'); connectWs(); }, Math.min(8000, 500 * 2 ** Math.min(wsRetry++, 4))); } };
   };
   timers.push(setInterval(() => { if (ws?.readyState === 1) ws.send('ping'); }, 25000));
-  // Room-time offset: three pings per batch, keep the lowest-latency sample, and repeat every 30 s (a phone that changes
-  // network, or a clock that drifts, used to keep the offset measured once at connect).
+  // Pings: three at connect, then every 5 s for the first minute (the film download distorts early samples), then every 30 s.
+  // The lowest round trip of the last 60 s gives the one-way latency estimate; the clock offset is kept only for the log.
   const pingTime = () => { for (let i = 0; i < 3; i++) setTimeout(() => wsSend({ t: 'time', c: Date.now() }), i * 300); };
-  let bestTime = null;
-  timers.push(setInterval(() => { if (ws?.readyState === 1) pingTime(); }, 30000));
+  const connectedAt = Date.now();
+  timers.push(setInterval(() => { if (ws?.readyState === 1 && (Date.now() - connectedAt < 60000 || (Date.now() - connectedAt) % 30000 < 5000)) pingTime(); }, 5000));
   const onRoom = (m) => {
     switch (m.t) {
-      case 'hello': takeClock(m.clock); setPinned(m.pinned); $('viewers').textContent = m.viewers; if ($('slow')) $('slow').value = m.slowModeS; (m.recent || []).forEach(addMsg); setLive(m.hostTracks, m.hostOnline); if (m.hostTracks) pullTracks(m.hostTracks); if (m.muted) $('chatHint').textContent = 'You are muted by the host.'; break;
-      case 'time': { const now = Date.now(); const rtt = now - m.c, off = m.s - (m.c + rtt / 2); if (!bestTime || rtt <= bestTime.rtt || now - bestTime.at > 60000) { bestTime = { rtt, at: now }; offset = off; } break; }
+      case 'hello': takeClock(m.clock, m.serverTime); if (isHost && liveList().length) api('PUT', P('/rtc/tracks'), { tracks: liveList() }, auth()).then(r => log(`re-announced ${liveList().length} live track(s) after reconnect -> ${r.status}`)); setPinned(m.pinned); $('viewers').textContent = m.viewers; if ($('slow')) $('slow').value = m.slowModeS; (m.recent || []).forEach(addMsg); setLive(m.hostTracks, m.hostOnline); if (m.hostTracks) pullTracks(m.hostTracks); if (m.muted) $('chatHint').textContent = 'You are muted by the host.'; break;
+      case 'time': { const now = Date.now(); const rtt = now - m.c; if (!bestPing || rtt <= bestPing.rtt || now - bestPing.at > 60000) { bestPing = { rtt, at: now }; offset = m.s - (m.c + rtt / 2); } if (!pingKnown) { pingKnown = true; if (isHost && clock) takeClock(clock, clock.at + (Date.now() - clock.local)); } break; }
       case 'chat': addMsg(m.msg); break;
       case 'system': addSys(m.text); break;
       case 'pin': setPinned(m.pinned); break;
-      case 'clock': takeClock(m.clock); break;
+      case 'clock': takeClock(m.clock, m.s); break;
       case 'roster': $('viewers').textContent = m.viewers; setLive(hostTracks, m.hostOnline); break;
       case 'tracks': setLive(m.hostTracks, true); if (m.hostTracks) pullTracks(m.hostTracks); else if (!isHost) clearRemote(); break;
       case 'slow': if ($('slow')) $('slow').value = m.slowModeS; if (!isHost) $('chatHint').textContent = m.slowModeS ? `Slow mode: one message every ${m.slowModeS} s.` : 'One message every 1.5 s.'; break;
       case 'muted': $('chatHint').textContent = m.muted ? 'You are muted by the host.' : 'You can chat again.'; break;
-      case 'ended': $('bLive').textContent = 'ENDED'; $('bLive').className = 'badge'; addSys('The host ended the party.'); toast('The party has ended.'); break;
+      case 'ended': endParty('The host ended the party.'); break;
       case 'error': log(`room refused: ${m.code} ${m.detail || ''}`); if (m.code === 'rate' || m.code === 'muted') $('chatHint').textContent = m.detail; break;
     }
   };
@@ -591,7 +711,7 @@ async function runParty(me_, isHost) {
       const dDelay = (audio.jitterBufferDelay || 0) - jb.delay, dCount = (audio.jitterBufferEmittedCount || 0) - jb.count; jb = { delay: audio.jitterBufferDelay || 0, count: audio.jitterBufferEmittedCount || 0 };
       const jbMs = dCount > 0 ? 1000 * dDelay / dCount : 0;
       if (clock?.rtt) lastRtt.host = clock.rtt; const mine = rttOf(stats); if (mine) lastRtt.mine = mine;   // samples without a round trip keep the last one
-      target = Math.min(2000, lastRtt.host / 2 + lastRtt.mine / 2 + jbMs + 80);
+      target = Math.min(600, lastRtt.host / 2 + lastRtt.mine / 2 + jbMs + 80);   // capped: beyond 0.6 s the measurement or the network is too poor for alignment to matter
       if (++voiceLogN % 5 === 0) log(`voice delay parts: host rtt ${lastRtt.host.toFixed(0)} ms, my rtt ${lastRtt.mine.toFixed(0)} ms, jitter buffer ${jbMs.toFixed(0)} ms -> ${target.toFixed(0)} ms`);
     }
     const next = target ? Math.round(voiceMs ? voiceMs * 0.7 + target * 0.3 : target) : 0;

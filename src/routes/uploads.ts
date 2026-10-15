@@ -18,7 +18,8 @@ export async function handleUploads(req: Request, env: Env, url: URL, seg: strin
     const parts = Math.ceil(body.sizeBytes / partSize);
     if (parts > 10000) return err("file too large for 10,000 parts", 400);
     const uploadId = await createMultipart(env, env.MASTERS_BUCKET, key, "video/quicktime");
-    await env.DB.prepare("INSERT INTO films (id,creator_id,title,status,source_key,upload_id) VALUES (?,?,?,?,?,?)")
+    // every film gets both versions, DRM and the clear watch-party copy (2026-10-14; before, the Ztor side set this by hand)
+    await env.DB.prepare("INSERT INTO films (id,creator_id,title,status,source_key,upload_id,protections) VALUES (?,?,?,?,?,?,'drm,url')")
       .bind(filmId, cid, body.title ?? "untitled", "uploading", key, uploadId).run();
     const urls: string[] = [];
     for (let n = 1; n <= parts; n++) urls.push(await presign(env, "PUT", env.MASTERS_BUCKET, key, { partNumber: String(n), uploadId }, 3600));

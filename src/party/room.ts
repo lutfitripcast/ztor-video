@@ -6,7 +6,7 @@ import { DurableObject } from "cloudflare:workers";
 import type { Env } from "../lib/env";
 
 export type Role = "host" | "viewer";
-export interface Clock { state: "playing" | "paused"; position: number; rate: number; at: number; rtt?: number }   // at = server ms when set; rtt = host's round trip to the SFU in ms (viewers align the film with the host's voice)
+export interface Clock { state: "playing" | "paused"; position: number; rate: number; at: number; rtt?: number; why?: "buffering" | "offline" }   // at = server ms when set; rtt = host's round trip to the SFU in ms (viewers align the film with the host's voice)
 export interface HostTrack { sessionId: string; trackName: string; kind: "audio" | "video" }   // sessionId = the host's SFU session that publishes it
 export interface HostTracks { tracks: HostTrack[] }
 export interface ChatMsg { seq: number; userId: string; name: string; role: Role; text: string; at: number }
@@ -26,6 +26,9 @@ export class PartyRoom extends DurableObject<Env> {
   meta: PartyMeta | null = null;
   clock: Clock = { state: "paused", position: 0, rate: 1, at: Date.now() };
   clockSavedAt = 0;
+  lastClockAt = 0;
+  hostSeenAt = 0;   // last clock from the host; silence while playing freezes the clock (hostWatch)
+  hostOfflineSince = 0;   // when the host's last socket closed; 0 while a host socket is connected
   pinned: ChatMsg | null = null;
   hostTracks: HostTracks | null = null;
   banned = new Set<string>();
@@ -140,15 +143,20 @@ export class PartyRoom extends DurableObject<Env> {
         if (!host) return forbid();
         const state = m.state === "playing" ? "playing" : "paused";
         const position = Math.max(0, Number(m.position) || 0), rate = Math.min(2, Math.max(0.5, Number(m.rate) || 1));
-        // The host stamps the clock in room time itself (its NTP-style offset), so viewers are not behind by the host's
-        // uplink latency. Accept the stamp when it is close to our own clock; otherwise fall back to arrival time.
-        const now = Date.now(), at = typeof m.at === "number" && Math.abs(m.at - now) < 3000 ? m.at : now;
+        // Stamp on arrival minus the host's best one-way latency (half its lowest ping round trip, sent with the clock), so the
+        // host's uplink does not shift viewers and a congested host cannot stamp early (2026-10-09; the host's own room-time
+        // estimate was wrong by up to a second while it downloaded the film). `s` tells viewers the room time at send.
+        // Stamps are strictly increasing: a drag sends several clocks within one millisecond, and viewers keep the newest by stamp.
+        const now = Date.now(), at = Math.max(now - Math.min(500, Math.max(0, Number(m.up) || 0)), this.lastClockAt + 1); this.lastClockAt = at;
         const prev = this.clock, expected = prev.state === "playing" ? prev.position + (at - prev.at) / 1000 * prev.rate : prev.position;
         const rtt = Math.min(2000, Math.max(0, Number(m.rtt) || 0));
-        this.clock = { state, position, rate, at, rtt };
+        const why = m.why === "buffering" ? "buffering" : undefined;
+        this.clock = { state, position, rate, at, rtt, why };
+        this.hostSeenAt = now;
+        if (state === "playing") { const a = await this.ctx.storage.getAlarm(); if (a == null || a > now + 1000) await this.ctx.storage.setAlarm(now + 1000); }
         // The host now reports every second; persist only state changes, seeks and a 5 s heartbeat (not every tick).
         if (state !== prev.state || rate !== prev.rate || Math.abs(position - expected) > 1 || now - this.clockSavedAt > 5000) { this.clockSavedAt = now; await this.ctx.storage.put("clock", this.clock); }
-        return this.broadcast({ t: "clock", clock: this.clock }, ws);
+        return this.broadcast({ t: "clock", clock: this.clock, s: now }, ws);
       }
 
       case "pin": {
@@ -195,8 +203,28 @@ export class PartyRoom extends DurableObject<Env> {
     }
   }
 
-  async webSocketClose(ws: WebSocket) { try { ws.close(); } catch {} }
-  async webSocketError(ws: WebSocket) { try { ws.close(1011, "error"); } catch {} }
+  async webSocketClose(ws: WebSocket) { try { ws.close(); } catch {} await this.hostGone(ws); }
+  async webSocketError(ws: WebSocket) { try { ws.close(1011, "error"); } catch {} await this.hostGone(ws); }
+
+  /** The host's last socket closed (page closed or reloaded): freeze the clock where it is so viewers pause on that frame,
+   *  retract the camera tracks, and tell viewers the host is gone. Added 2026-10-09 after a reload left viewers playing. */
+  async hostGone(closing: WebSocket) {
+    const a = closing.deserializeAttachment() as Attachment | null;
+    if (a?.role !== "host") return;
+    const another = this.ctx.getWebSockets().some((s) => s !== closing && (s.deserializeAttachment() as Attachment | null)?.role === "host");
+    if (another) return;
+    const now = Date.now();
+    if (this.clock.state === "playing") {
+      const position = Math.max(0, this.clock.position + (now - this.clock.at) / 1000 * this.clock.rate);
+      const at = Math.max(now, this.lastClockAt + 1); this.lastClockAt = at;
+      this.clock = { ...this.clock, state: "paused", position, at };
+      this.clockSavedAt = now; await this.ctx.storage.put("clock", this.clock);
+      this.broadcast({ t: "clock", clock: this.clock, s: now }, closing);
+    }
+    this.hostOfflineSince = now;   // tracks stay announced for a short drop (the SFU sessions live on the host page, not on this socket); the alarm retracts after 10 s
+    const r = this.roster(); this.lastRoster = `${r.viewers}/${Math.max(0, r.connections - 1)}/false`;
+    this.broadcast({ t: "roster", ...r, connections: Math.max(0, r.connections - 1), hostOnline: false }, closing);
+  }
 
   // ---- housekeeping -------------------------------------------------------------------------------------------
   async action(actor: string, action: string, target?: string, detail?: string) {
@@ -206,13 +234,26 @@ export class PartyRoom extends DurableObject<Env> {
 
   async ensureAlarm() { if ((await this.ctx.storage.getAlarm()) == null) await this.ctx.storage.setAlarm(Date.now() + TICK_S * 1000); }
 
+  /** The host reports every second while playing. No report for 2 s means its network is gone (its page cannot say so):
+   *  freeze the clock at the position of the last report, so viewers stop instead of running ahead of a frozen host. */
+  async hostWatch(now: number) {
+    if (this.clock.state !== "playing" || !this.hostSeenAt || now - this.hostSeenAt < 2000) return;
+    const position = Math.max(0, this.clock.position + (this.hostSeenAt - this.clock.at) / 1000 * this.clock.rate);
+    const at = Math.max(now, this.lastClockAt + 1); this.lastClockAt = at;
+    this.clock = { ...this.clock, state: "paused", position, at, why: "offline" };
+    this.clockSavedAt = now; await this.ctx.storage.put("clock", this.clock);
+    this.broadcast({ t: "clock", clock: this.clock, s: now });
+  }
+
   async alarm() {
+    const now = Date.now(); await this.hostWatch(now);
     await this.flush();
     const r = this.roster(); const key = `${r.viewers}/${r.connections}/${r.hostOnline}`;
     // host gone (page closed or reloaded) while tracks are still announced: retract them so viewers drop the dead sessions
-    if (!r.hostOnline && this.hostTracks) { this.hostTracks = null; await this.ctx.storage.put("hostTracks", null); this.broadcast({ t: "tracks", hostTracks: null }); }
+    if (r.hostOnline) this.hostOfflineSince = 0; else if (!this.hostOfflineSince) this.hostOfflineSince = Date.now();
+    if (!r.hostOnline && this.hostTracks && Date.now() - this.hostOfflineSince > 10000) { this.hostTracks = null; await this.ctx.storage.put("hostTracks", null); this.broadcast({ t: "tracks", hostTracks: null }); }
     if (key !== this.lastRoster) { this.lastRoster = key; this.broadcast({ t: "roster", ...r }); }
-    if (r.connections > 0) await this.ctx.storage.setAlarm(Date.now() + TICK_S * 1000);
+    if (r.connections > 0) await this.ctx.storage.setAlarm(Date.now() + (this.clock.state === "playing" ? 1000 : TICK_S * 1000));
   }
 
   /** Chat and actions go to D1 in one batch per tick instead of one write per message. */
@@ -231,9 +272,13 @@ export class PartyRoom extends DurableObject<Env> {
   async end(by: string) {
     if (!this.meta || this.meta.status === "ended") return;
     this.meta = { ...this.meta, status: "ended" }; this.hostTracks = null;
-    await this.ctx.storage.put({ meta: this.meta, hostTracks: null });
+    // freeze the clock where the party ended, so nothing can keep a viewer's film running (2026-10-09)
+    const now = Date.now(), at = Math.max(now, this.lastClockAt + 1); this.lastClockAt = at;
+    const position = this.clock.state === "playing" ? Math.max(0, this.clock.position + (now - this.clock.at) / 1000 * this.clock.rate) : this.clock.position;
+    this.clock = { ...this.clock, state: "paused", position, at };
+    await this.ctx.storage.put({ meta: this.meta, hostTracks: null, clock: this.clock });
     await this.action(by, "end");
-    this.broadcast({ t: "ended" });
+    this.broadcast({ t: "ended", clock: this.clock, s: now });
     for (const ws of this.ctx.getWebSockets()) { try { ws.close(4000, "party ended"); } catch {} }
     await this.flush();
     try { await this.env.DB.prepare("UPDATE parties SET status='ended', ended_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?").bind(this.meta.partyId).run(); } catch {}

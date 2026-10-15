@@ -80,7 +80,8 @@ async function encodeJob(job) {
     }
     const files = await walk(`${dir}/packaged`);
 
-    // 4. upload every output through the Worker endpoint (Class A write each)
+    // 4. upload every output through the Worker endpoint (Class A write each). Every network call carries a timeout: on a
+    //    network that silently drops connections (seen 2026-10-13) a fetch without one hangs for ever instead of retrying.
     const t0 = Date.now(); let bytes = 0;
     const queue = [...files]; const workers = [];
     for (let i = 0; i < 6; i++) workers.push((async () => {
@@ -90,7 +91,7 @@ async function encodeJob(job) {
         bytes += body.length;
         for (let attempt = 1; ; attempt++) {
           let res, netErr;
-          try { res = await fetch(uploadEndpoint + rel, { method: "PUT", headers: { authorization: `Bearer ${runnerToken}`, "content-type": "application/octet-stream" }, body }); }
+          try { res = await fetch(uploadEndpoint + rel, { signal: AbortSignal.timeout(120_000), method: "PUT", headers: { authorization: `Bearer ${runnerToken}`, "content-type": "application/octet-stream" }, body }); }
           catch (e) { netErr = e; }   // network errors (fetch failed, reset) are retried like 5xx
           if (res?.ok) break;
           if (attempt >= 6) throw new Error(`upload ${rel} failed after ${attempt} attempts: ${netErr ? netErr.message : `${res.status} ${await res.text()}`}`);
@@ -116,7 +117,7 @@ async function encodeJob(job) {
 async function report(doneEndpoint, token, body) {
   for (let attempt = 1; ; attempt++) {
     try {
-      const r = await fetch(doneEndpoint, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify(body) });
+      const r = await fetch(doneEndpoint, { signal: AbortSignal.timeout(60_000), method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify(body) });
       console.log(`done -> ${r.status} ${await r.text()}`); return;
     } catch (e) { if (attempt >= 6) throw e; await new Promise((r) => setTimeout(r, 2000 * attempt)); }
   }
@@ -142,7 +143,7 @@ if (process.env.POLL_URL && process.env.RUNNER_TOKEN) {
   (async function loop() {
     for (;;) {
       try {
-        const r = await fetch(`${base}/jobs/next`, { headers: { authorization: `Bearer ${tok}` } });
+        const r = await fetch(`${base}/jobs/next`, { signal: AbortSignal.timeout(30_000), headers: { authorization: `Bearer ${tok}` } });
         if (r.status === 200) { const job = await r.json(); console.log(`job ${job.filmId}`); await encodeJob({ ...job, runnerToken: tok }); continue; }
         if (r.status !== 204) console.log(`poll ${r.status} ${await r.text()}`);
       } catch (e) { console.log(`poll error ${e.message}`); }

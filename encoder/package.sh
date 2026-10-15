@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Proposal step 5, part 2: Shaka Packager -> CMAF, HLS + DASH, 6 s segments, encrypted with the keys we are given.
+# Proposal step 5, part 2: Shaka Packager -> CMAF HLS (HLS only since 2026-10-13), 6 s segments, encrypted with the keys we are given.
 # Usage: package.sh <renditions_dir> <outdir> <keys "label=VIDEO:key_id=..:key=..,label=AUDIO:..."> [scheme cbcs|cenc]
 set -euo pipefail
 REN="$1"; OUT="$2"; KEYS="$3"; SCHEME="${4:-cbcs}"; IV="${5:-}"
@@ -26,7 +26,7 @@ packager "${ARGS[@]}" \
   --keys "$KEYS" \
   --protection_systems Widevine,FairPlay,PlayReady \
   --hls_key_uri "$(skd "$VKID")" \
-  --mpd_output "$OUT/manifest.mpd" --hls_master_playlist_output "$OUT/master.m3u8" \
+  --hls_master_playlist_output "$OUT/master.m3u8" \
   --quiet
 # The packager writes one key URI for every playlist; give each rendition its own key id (video / UHD / audio).
 for pl in "$OUT"/stream_*.m3u8; do

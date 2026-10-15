@@ -11,6 +11,8 @@ All tests drive the deployed Worker from this machine. They need Node 22 or newe
 | `tests/mic-test.mjs` | Chrome, wrangler | mic-only mode and the host's camera stop and restart |
 | `tests/simulcast-test.mjs` | Chrome | the three simulcast layers and the layer switch route |
 | `tests/restart-test.mjs`, `tests/screen-reload-test.mjs` | Chrome | host reload and republish |
+| `tests/scrub-test.mjs` | Chrome, wrangler | drags, stalls, reload, link drops, end of party; `BASE_URL` picks the Worker |
+| `tests/format-test.mjs` | real Chrome with Widevine (launched on a debugging port), wrangler | every ready film, DRM and protected-URL versions, over HLS; `HOST_RULES` pins addresses on networks that hijack workers.dev DNS; `WRANGLER_PROFILE` / `WRANGLER_CONFIG` pick the account |
 
 Scripts that create throwaway accounts clean them up through `wrangler d1 execute` at the end, so they need a logged-in wrangler.
 

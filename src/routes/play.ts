@@ -29,13 +29,13 @@ export async function handlePlay(req: Request, env: Env, url: URL, seg: string[]
     const uhd = mode === "drm";
     const token = await signJwt({ sub: body.userId, filmId, deviceId: body.deviceId ?? "unknown", uhd, mode, iat, exp: iat + Number(env.JWT_TTL_S) }, env.JWT_SECRET);
     const base = `${url.origin}/media/${filmId}/v${film.version}${mode === "url" ? "/url" : ""}`;
-    if (mode === "url") return json({ token, expiresInS: Number(env.JWT_TTL_S), mode, dash: `${base}/manifest.mpd?t=${token}`, hls: `${base}/master.m3u8?t=${token}`,
+    if (mode === "url") return json({ token, expiresInS: Number(env.JWT_TTL_S), mode, hls: `${base}/master.m3u8?t=${token}`,
       drm: "none: protected URL (signed 4 h links on every manifest and segment; segments are clear once fetched)", vendorDrm: null,
       policy: { rentalWindowH: 48, offline: false, maxHeight: 1080, reason: "protected-URL version: no DRM, so no HDCP; capped at 1080p" } });
     const venv = env as VendorEnv;
     const vendor = venv.DRM_VENDOR ? { vendor: venv.DRM_VENDOR, widevine: `${url.origin}/license/widevine`, playready: `${url.origin}/license/playready`,
       fairplay: `${url.origin}/license/fairplay`, fairplayCertificate: `${url.origin}/license/fairplay/cert` } : null;
-    return json({ token, expiresInS: Number(env.JWT_TTL_S), mode, dash: `${base}/manifest.mpd?t=${token}`, hls: `${base}/master.m3u8?t=${token}`,
+    return json({ token, expiresInS: Number(env.JWT_TTL_S), mode, hls: `${base}/master.m3u8?t=${token}`,
       licenseUrl: `${url.origin}/license/clearkey`, drm: vendor ? `${vendor.vendor} (Widevine / PlayReady / FairPlay)` : "clearkey (Phase A stand-in for Widevine/FairPlay/PlayReady)", vendorDrm: vendor,
       policy: { rentalWindowH: 48, offline: false, maxHeight: 2160, reason: "2160p key entitled for every DRM device (open rule, 2026-09-25)." } });
   }

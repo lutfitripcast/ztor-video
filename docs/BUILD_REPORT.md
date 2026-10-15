@@ -331,3 +331,21 @@ The user reported that choosing a resolution in the quality selector paused the 
 | `(t, false)` | 0 | 0 | 10.0 s (plays out the old buffer) |
 
 A margin of one segment asks the connection for roughly the rung's own bitrate during the switch, the same as sustained playback of that rung, so it adds no requirement that playing the rung does not already have. The party player is untouched: viewers there are on ABR and have no selector. Deployed the same day (version 92d92cdc) and re-measured on the live page: 5 of 6 runs identical to the table, 0 s frozen and 1080p on screen after 4.0 s; one run showed a 10 s stall with no `waiting` event and the new rung never arriving, not reproduced in four further runs, so most likely a one-off in the headless tab rather than the switch logic.
+
+## 14. HLS on every browser (added 2026-10-13)
+
+Asked for: play HLS with DRM on Chrome, not only on Safari. Every film was already packaged once with two index files over the same cbcs segments, and the HLS playlists already carried all three key systems (FairPlay, Widevine, PlayReady), so the change is one line in the page: the Watch page and the party player now load the HLS playlist on every browser; DASH remains packaged and is used only by the ClearKey fallback. Deployed to both accounts.
+
+Verified in the real Chrome 155 with its Widevine module (the Playwright-launched Chrome has no Widevine and fails every DRM load with 4032 or 6001, which cost an hour; `scripts/tests/format-test.mjs` now drives Chrome over its debugging port): both films, both versions, play over HLS at 720p to 1080p, Widevine key system, keys usable.
+
+**Measured difference that matters for cost** (`license-count-probe`, 15 s of playback per case):
+
+| | HLS on Chrome | DASH on Chrome |
+|---|---|---|
+| License requests per play | 6 (3 service-certificate exchanges + 3 licenses) | 2 (1 + 1) |
+| Key sessions | 3, one per key id | 3 keys in one session |
+| First frame | 1.2 s | 0.8 to 3.5 s |
+
+Shaka's HLS parser opens one DRM session per `EXT-X-KEY`, and the packager writes one key per rung group (SD/HD video, 2160p video, audio), so HLS costs three licenses per play where DASH costs one. This is the same count FairPlay has always had on Safari. At the proposal's $0.005 to $0.02 per licence that is $0.015 to $0.06 per view instead of $0.005 to $0.02. The fix, if the count matters, is at packaging time: since the "open" 4K rule of 2026-09-25 gives the 2160p key the same policy as the others, the three keys could become one video key plus one audio key (2 licences) or a single key (1 licence) for films encoded from now on. Not changed.
+
+**Update, same day: HLS only.** The user then asked to drop DASH entirely. The pass and the party join now return only the HLS link; the media route refuses `.mpd` requests (404); the packager no longer writes `manifest.mpd` for new films (the workflow's readiness check looks for `master.m3u8`); the Watch page, the party player and the legacy console load HLS on every browser; the console's check 2 and the room protocol test probe `master.m3u8` for the 401 without a pass. Deployed to both accounts and re-verified with the format test in the real Chrome.

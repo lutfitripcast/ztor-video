@@ -29,7 +29,7 @@ browser ──HTTPS──▶ Worker (src/index.ts)
 encoder (Docker, polls /jobs) ──▶ R2 via presigned URLs
 ```
 
-The film is delivered as HLS (Safari, FairPlay, cbcs) and DASH (Chrome, Edge, Firefox, Widevine). Chrome also plays cbcs since the key-system fix recorded in the build report. The protected-URL version is capped at 1080p because without DRM there is no HDCP.
+The film is packaged once as CMAF HLS (cbcs). Every browser plays the HLS playlist: Safari with FairPlay, Chrome, Edge and Android with Widevine or PlayReady. DASH is neither packaged nor served since 2026-10-13; films packaged before then still have a manifest.mpd in storage, which the Worker refuses. The protected-URL version is capped at 1080p because without DRM there is no HDCP.
 
 ## Repository layout
 

@@ -1,6 +1,6 @@
 // Watch party: Cloudflare Realtime SFU (WebRTC) and Realtime TURN, called from the Worker only.
 // The browser never sees the app secret. The SFU forwards the host's camera / mic / screen tracks to viewers;
-// the film itself never goes through here (it is served from R2 as protected-URL HLS/DASH).
+// the film itself never goes through here (it is served from R2 as protected-URL HLS).
 // API: https://developers.cloudflare.com/realtime/sfu/api/   base https://rtc.live.cloudflare.com/v1
 import type { Env } from "./env";
 

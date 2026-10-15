@@ -51,9 +51,9 @@ export class EncodeFilmWorkflow extends WorkflowEntrypoint<Env, EncodeParams> {
       const prefix = `films/${filmId}/v${film?.version ?? 1}`;
       const wantUrl = String(film?.protections ?? "drm").split(",").includes("url");
       const [mpd, m3u8, urlMpd] = await Promise.all([
-        this.env.STREAMS.head(`${prefix}/manifest.mpd`),
         this.env.STREAMS.head(`${prefix}/master.m3u8`),
-        wantUrl ? this.env.STREAMS.head(`${prefix}/url/manifest.mpd`) : Promise.resolve(null),
+        this.env.STREAMS.head(`${prefix}/master.m3u8`),
+        wantUrl ? this.env.STREAMS.head(`${prefix}/url/master.m3u8`) : Promise.resolve(null),
       ]);
       if (!mpd || !m3u8) throw new Error("manifests missing after encode");
       if (wantUrl && !urlMpd) throw new Error("protected-URL manifests missing after encode");

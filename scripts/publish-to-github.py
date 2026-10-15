@@ -2,6 +2,7 @@
 """Publish this folder to a new GitHub repository through the API, for a machine without git.
 
 Usage:  GH_TOKEN=<personal access token with repo scope> python3 scripts/publish-to-github.py [repo name] [--public]
+        ... --update [--message "<commit message>"]   adds one commit with the current files to an existing repository
 Run it from the repository root (the folder that holds package.json). The token is read from the environment only.
 
 What it does: checks the token, creates a private repository (auto-initialised so the branch exists), uploads every
@@ -13,7 +14,9 @@ import os, sys, json, base64, urllib.request, urllib.error
 
 T = os.environ.get("GH_TOKEN")
 if not T: sys.exit("set GH_TOKEN")
-name = next((a for a in sys.argv[1:] if not a.startswith("--")), "ztor-video")
+args = sys.argv[1:]
+if "--message" in args: i = args.index("--message"); args = args[:i] + args[i + 2:]   # the message text is not the repo name
+name = next((a for a in args if not a.startswith("--")), "ztor-video")
 private = "--public" not in sys.argv
 API = "https://api.github.com"
 DESC = ("Film streaming on Cloudflare Workers: R2 storage, multi-DRM (Widevine, PlayReady, FairPlay) or signed protected "
@@ -34,17 +37,24 @@ def gh(method, path, body=None):
 s, me = gh("GET", "/user")
 if s != 200: sys.exit(f"token check failed: {s} {me.get('message')}")
 print("account:", me["login"])
-s, repo = gh("POST", "/user/repos", {"name": name, "description": DESC, "private": private, "auto_init": True, "has_wiki": False, "has_projects": False})
-if s == 422: sys.exit("repository exists already; nothing was changed")
-if s != 201: sys.exit(f"create failed: {s} {repo.get('message')} {repo.get('errors')}")
-full, branch = repo["full_name"], repo["default_branch"]
-print("created", repo["html_url"])
+update = "--update" in sys.argv
+if update:
+    s, repo = gh("GET", f"/repos/{me['login']}/{name}")
+    if s != 200: sys.exit(f"repository not found for --update: {s} {repo.get('message')}")
+    full, branch = repo["full_name"], repo["default_branch"]
+    print("updating", repo["html_url"], "branch", branch)
+else:
+    s, repo = gh("POST", "/user/repos", {"name": name, "description": DESC, "private": private, "auto_init": True, "has_wiki": False, "has_projects": False})
+    if s == 422: sys.exit("repository exists already; nothing was changed (use --update to add a commit with the current files)")
+    if s != 201: sys.exit(f"create failed: {s} {repo.get('message')} {repo.get('errors')}")
+    full, branch = repo["full_name"], repo["default_branch"]
+    print("created", repo["html_url"])
 
 files = []
 for root, dirs, names in os.walk("."):
     dirs[:] = [d for d in dirs if d not in EXCL_DIRS]
     for n in names:
-        if n in EXCL_FILES or n.endswith(".png"): continue
+        if n in EXCL_FILES or n.endswith(".png") or (n.startswith(".dev.vars") and n != ".dev.vars.example"): continue
         files.append(os.path.relpath(os.path.join(root, n), "."))
 files.sort()
 print("uploading", len(files), "files")
@@ -60,7 +70,7 @@ for f in files:
 s, t = gh("POST", f"/repos/{full}/git/trees", {"tree": tree})
 if s != 201: sys.exit(f"tree failed: {s} {t.get('message')}")
 s, ref = gh("GET", f"/repos/{full}/git/ref/heads/{branch}")
-msg = ("ztor-video: film streaming on Cloudflare Workers\n\n"
+msg = (sys.argv[sys.argv.index("--message") + 1] if "--message" in sys.argv else None) or ("ztor-video: film streaming on Cloudflare Workers\n\n"
        "One Worker with R2 storage, D1, KV, a Workflow for encoding, a Durable Object per watch party and the Realtime SFU\n"
        "for the host's camera. Multi-DRM through Axinom or signed protected URLs, rentals, accounts with roles, and\n"
        "synchronized watch parties. Plain HTML pages with Shaka Player. Docs and the pricing test scripts included.\n\n"

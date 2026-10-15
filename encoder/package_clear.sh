@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Protected-URL version: the same renditions packaged as CMAF HLS + DASH, 6 s segments, NO encryption.
+# Protected-URL version: the same renditions packaged as CMAF HLS (HLS only since 2026-10-13), 6 s segments, NO encryption.
 # The only protection is the signed, expiring URL the Worker requires on every manifest and segment.
 # Usage: package_clear.sh <renditions_dir> <outdir>
 set -euo pipefail
@@ -15,6 +15,6 @@ if [ -f "$REN/audio_128k.mp4" ]; then
 fi
 packager "${ARGS[@]}" \
   --segment_duration 6 --fragment_duration 6 --generate_static_live_mpd \
-  --mpd_output "$OUT/manifest.mpd" --hls_master_playlist_output "$OUT/master.m3u8" \
+  --hls_master_playlist_output "$OUT/master.m3u8" \
   --quiet
 find "$OUT" -type f | wc -l | sed 's/^/files=/'

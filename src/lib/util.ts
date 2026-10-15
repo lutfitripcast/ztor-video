@@ -2,7 +2,7 @@
 import type { Env } from "./env";
 
 export const MIME: Record<string, string> = {
-  m4s: "video/iso.segment", mp4: "video/mp4", m3u8: "application/vnd.apple.mpegurl", mpd: "application/dash+xml",
+  m4s: "video/iso.segment", mp4: "video/mp4", m3u8: "application/vnd.apple.mpegurl",
   vtt: "text/vtt", json: "application/json",
 };
 export const ext = (p: string) => p.split(".").pop()?.toLowerCase() ?? "";

@@ -3,6 +3,7 @@
 // step 9 pages. Accounts, the app API and the watch party were added on top (see README).
 import type { Env } from "./lib/env";
 import { json, err } from "./lib/env";
+import { BUILD } from "./build";   // stamped by scripts/stamp-build.mjs at deploy
 import { handleUploads } from "./routes/uploads";
 import { handleFilms } from "./routes/films";
 import { handleRunner } from "./routes/runner";
@@ -43,7 +44,7 @@ export default {
         case "app": return page(req, env, url, "/app.html");                    // the app: login, home, watch, party, admin
         case "watch": return page(req, env, url, "/watch.html");                // legacy party page
         case "player": return page(req, env, url, "/console.html");             // legacy test console
-        case "health": if (p === "/health") return json({ ok: true, phase: "A", time: new Date().toISOString() });
+        case "health": if (p === "/health") return json({ ok: true, phase: "A", build: BUILD, time: new Date().toISOString() });
       }
       return err("not found", 404);
     } catch (e: any) {

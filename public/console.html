@@ -181,7 +181,7 @@ async function play() {
   if (player) await player.destroy();
   lic = 0; $('lic').textContent = '0';
   player = new shaka.Player(); await player.attach($('v'));
-  // Key system by browser. With a DRM vendor configured: Safari -> HLS + FairPlay, others -> DASH + Widevine (PlayReady on Edge).
+  // Key system by browser, all over HLS: Safari -> FairPlay, others -> Widevine (PlayReady on Edge).
   // Without a vendor (Phase A): ClearKey stand-in. The Worker proxies every license and checks the pass first.
   const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
   const urlMode = pass.mode === 'url';
@@ -191,11 +191,11 @@ async function play() {
         // no robustness requested here: the license server's per-key policy decides which keys this device may have
         advanced: { 'com.apple.fps': { serverCertificateUri: vd.fairplayCertificate } } }
     : { servers: { 'org.w3.clearkey': pass.licenseUrl } };
-  // Safari plays HLS natively for FairPlay and cannot send headers: keep the ?t= pass in the URL. DASH keeps the header.
+  // Safari's native HLS player cannot send headers: the ?t= pass stays in the URL.
   // protected-URL version: the pass rides in every link (manifest rewrites the segment URLs), no key system at all
-  const manifestUrl = urlMode ? (isSafari ? pass.hls : pass.dash) : vd && isSafari ? pass.hls : pass.dash.split('?')[0];
+  const manifestUrl = pass.hls;   // HLS only since 2026-10-13
   if (urlMode) log('protection: signed URL only. Every manifest and segment link carries the 4 h pass; segments are clear, no license is ever requested.');
-  else log(`key system: ${vd ? (isSafari ? 'FairPlay (HLS)' : 'Widevine/PlayReady (DASH)') + ' via ' + vd.vendor : 'ClearKey stand-in (DASH)'}`);
+  else log(`key system: ${vd ? (isSafari ? 'FairPlay' : 'Widevine/PlayReady') + ' over HLS via ' + vd.vendor : 'ClearKey stand-in over HLS'}`);
   // Shaka's own HLS engine on Safari (not the native player): gives track selection, buffering stats and header-based auth.
   // Set ?nativehls=1 in the page URL to fall back to Safari's native HLS player.
   const nativeHls = new URLSearchParams(location.search).get('nativehls') === '1';
@@ -258,7 +258,7 @@ $('bChecks').onclick = async () => {
   const { body: st0 } = await api('GET', `/test/status/${f}?user=${probe}`);
   let r = await api('POST', `/play/${f}`, { userId: probe, deviceId: 'probe' }); set('c1', r.status === 402, `${r.status} "${r.body.error || ''}"`);
   const version = $('film').selectedOptions[0].textContent.match(/v(\d+)/)[1];
-  r = await api('GET', `/media/${f}/v${version}/manifest.mpd`); set('c2', r.status === 401, `${r.status}`);
+  r = await api('GET', `/media/${f}/v${version}/master.m3u8`); set('c2', r.status === 401, `${r.status}`);
   r = await api('GET', `/media/${f}/v${version}/master.m3u8`, null, { Authorization: 'Bearer forged.pass.value' }); set('c3', r.status === 401, `${r.status}`);
   // every segment must carry sample-encryption boxes (senc): clear_lead is 0 for paid films
   const segChecks = await Promise.all([1, 3].map(async (n) => { const r = await fetch(`/media/${f}/v${version}/video_360p/${n}.m4s`); const b = new Uint8Array(await r.arrayBuffer()); return { n, status: r.status, kb: (b.length/1e3).toFixed(0), enc: new TextDecoder('latin1').decode(b).includes('senc') }; }));

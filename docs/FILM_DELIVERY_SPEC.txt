@@ -1,0 +1,101 @@
+FILM DELIVERY SPEC - ztor-video test platform
+=============================================
+Version 2, 2026-10-14 (adds integrity, handover sheet, self-check, transfer, versions, rejections)
+
+Please deliver ONE master file per film. Our encoder builds every streaming
+rendition from it (2160p down to 360p) and packages both versions we use:
+the DRM-protected streaming version and the clear protected-URL version for
+watch parties. Do not deliver HLS, DASH or multiple renditions.
+
+Container      MP4 or MOV
+
+Video codec    H.264 (High profile) or H.265, 8-bit, 4:2:0, progressive.
+               ProRes is accepted but is about 10x larger; prefer a
+               high-bitrate H.264/H.265 mezzanine.
+
+Resolution     Native: 3840x2160 (4K) or 1920x1080. No upscaling needed.
+
+Frame rate     Constant, at the film's native rate (23.976, 24 or 25).
+               No variable frame rate, no interlacing.
+
+Colour         Rec.709 SDR. Our output is 8-bit SDR, so an HDR master
+               (HLG, PQ, Dolby Vision) would come out with wrong colours.
+               If the film only exists in HDR, tell us before converting.
+
+Bitrate        1080p: 20 to 40 Mbps.   2160p: 50 to 80 Mbps.
+
+Audio          One stereo mix as the FIRST audio track, 48 kHz, AAC or PCM.
+               Only the first audio track is used; 5.1 is downmixed to
+               stereo. One language only for now.
+
+Subtitles      Separate subtitle tracks are not supported yet. If the film
+               needs subtitles, burn them into the picture. Please also
+               send the subtitle file (SRT or VTT) for a later version.
+
+File name      ASCII letters, digits, dots and dashes only; no spaces or
+               Chinese characters. Example: SPL2_master_2160p.mp4
+
+Size           A 2-hour film at these bitrates is 30 to 70 GB. Any size up
+               to 1 TB is accepted.
+
+Delivery       Either
+               (a) upload straight into our storage with the upload script
+                   we provide (needs only Python 3 and the platform URL), or
+               (b) hand us the file on a drive or a download link and we
+                   upload it.
+               Tell us which you prefer.
+
+Integrity      With every file, send its size in bytes and its SHA-256
+               checksum, so we can prove the copy we received is complete.
+                 macOS/Linux:  shasum -a 256 FILE
+                 Windows:      certutil -hashfile FILE SHA256
+               We will not start an encode on a file whose checksum does
+               not match.
+
+Handover sheet One line per film, as a text or CSV file:
+                 title | file name | size (bytes) | SHA-256 | duration |
+                 resolution | frame rate | audio (stereo/5.1, language) |
+                 subtitles (burned-in / separate / none) | notes
+               Example:
+                 SPL2 trailer | SPL2_master_2160p.mp4 | 1516711936 | 3f9c... |
+                 00:01:13 | 3840x2160 | 23.976 | stereo zh | burned-in | -
+
+Self-check     Run on each file before sending; the first line should show
+               one video and one audio stream, the second the frame rate
+               and pixel format (yuv420p = 8-bit 4:2:0):
+                 ffprobe -v error -show_entries stream=codec_type,codec_name
+                   -of csv=p=0 FILE
+                 ffprobe -v error -select_streams v:0
+                   -show_entries stream=r_frame_rate,pix_fmt,color_transfer
+                   -of csv=p=0 FILE
+               color_transfer must be bt709 (SDR), not smpte2084 or
+               arib-std-b67 (HDR).
+
+Transfer       Links must expire (7 days at most) and must not be public
+               listings; prefer a drive or a direct upload with our script,
+               which goes straight into private storage. Do not post links
+               in group chats. Tell us the expected size before sending.
+
+Versions       If a film is re-delivered, use a new file name with a version
+               suffix (SPL2_master_2160p_v2.mp4) and say what changed. We
+               keep each version as a separate encode.
+
+What you get   For each film we confirm receipt with the checksum match,
+back           then the film id on the platform and its status (uploaded,
+               encoding, ready). A film is "ready" when it plays in both
+               versions (DRM and watch party); we send the test link.
+
+Rejections     We will send a file back, with the reason, if it is:
+               interlaced; variable frame rate; HDR without prior notice;
+               missing or multichannel-only audio with no stereo mix;
+               named with spaces or non-ASCII characters; or if its
+               checksum does not match the sheet.
+
+Checklist before sending
+  [ ] plays in VLC from start to end
+  [ ] one video track; one stereo audio track, and it is the first track
+  [ ] constant frame rate
+  [ ] SDR, Rec.709 (color_transfer bt709)
+  [ ] ASCII file name
+  [ ] size and SHA-256 in the handover sheet
+  [ ] transfer link expires and is not public

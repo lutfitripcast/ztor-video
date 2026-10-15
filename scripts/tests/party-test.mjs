@@ -11,7 +11,7 @@ const wsOpen = (url) => new Promise((res, rej) => { const w = new WebSocket(url)
 out("existing /health", (await j("GET", "/health")).s);
 out("existing /player", (await fetch(B + "/player")).status);
 out("existing /test/films", (await j("GET", "/test/films")).s);
-out("existing manifest w/o pass (expect 401)", (await j("GET", `/media/${FILM}/v6/manifest.mpd`)).s);
+out("existing manifest w/o pass (expect 401)", (await j("GET", `/media/${FILM}/v6/master.m3u8`)).s);
 out("new /watch page", (await fetch(B + "/watch")).status);
 
 // 1. create

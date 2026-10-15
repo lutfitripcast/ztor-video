@@ -36,22 +36,8 @@ export async function handleMedia(req: Request, env: Env, url: URL, seg: string[
       }
       return new Response(out.join("\n"), { headers: { "content-type": "application/vnd.apple.mpegurl", "access-control-allow-origin": "*", "cache-control": "private, no-store" } });
     }
-    if (/\.mpd$/i.test(rel)) {
-      const maxH = claims?.uhd && !urlVersion ? 2160 : 1080;
-      // Shaka Packager puts width/height on the AdaptationSet when it holds one Representation, otherwise on each Representation.
-      // Drop Representations above the policy; drop whole AdaptationSets whose own height is above it or that end up empty.
-      let mpd = (await obj.text()).replace(/<AdaptationSet\b[^>]*>[\s\S]*?<\/AdaptationSet>/g, (set) => {
-        const open = /<AdaptationSet\b[^>]*>/.exec(set)![0];
-        if (/contentType="audio"|mimeType="audio/.test(open)) return set;
-        const setH = Number(/\b(?:max)?[hH]eight="(\d+)"/.exec(open)?.[1] ?? 0);
-        if (setH > maxH && !/<Representation\b[^>]*\bheight="/.test(set)) return "";
-        const filtered = set.replace(/<Representation\b[^>]*\bheight="(\d+)"[^>]*(?:\/>|>[\s\S]*?<\/Representation>)/g, (m, h) => Number(h) > maxH ? "" : m);
-        return /<Representation\b/.test(filtered) ? filtered : "";
-      });
-      // protected-URL version: every init and media template carries the pass, so segments cannot be fetched without it
-      if (urlVersion) mpd = mpd.replace(/\b(initialization|media)="([^"]+)"/g, (_m, attr, v) => `${attr}="${v}?t=${t}"`);
-      return new Response(mpd, { headers: { "content-type": "application/dash+xml", "access-control-allow-origin": "*", "cache-control": "private, no-store" } });
-    }
+    // HLS only (2026-10-13): DASH manifests are no longer served; films are packaged as HLS alone from now on.
+    if (/\.mpd$/i.test(rel)) return err("DASH is not served; use the HLS playlist", 404);
     if (urlVersion && /\.m3u8$/i.test(rel)) {
       // media playlist of the protected-URL version: sign the init map and every segment line
       const out = (await obj.text()).split("\n").map((line) => {

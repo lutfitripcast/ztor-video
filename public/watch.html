@@ -180,7 +180,7 @@ const api = async (method, path, body, headers = {}) => {
 };
 const q = new URLSearchParams(location.search);
 const deviceId = 'web-' + navigator.userAgent.slice(0, 20);
-let me = null;          // join response: token, role, ws, dash, hls, ...
+let me = null;          // join response: token, role, ws, hls, ...
 let ws = null, player = null, clock = null, offset = 0, userStarted = false, pinnedSeq = null;
 const auth = () => ({ Authorization: 'Bearer ' + me.token });
 const P = (path) => `/party/${me.partyId}${path}`;
@@ -236,7 +236,7 @@ async function loadFilm() {
   player.addEventListener('adaptation', showActive); player.addEventListener('variantchanged', showActive);
   const v = $('v');
   v.addEventListener('playing', () => $('st').textContent = 'playing'); v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; }); v.addEventListener('waiting', () => $('st').textContent = 'buffering');
-  try { $('st').textContent = 'loading'; await player.load(isSafari ? me.hls : me.dash); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, ${player.getVariantTracks().length} tracks, protected-URL (no license requests)`); }
+  try { $('st').textContent = 'loading'; await player.load(me.hls); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, ${player.getVariantTracks().length} tracks, protected-URL (no license requests)`); }
   catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
   if (me.role === 'viewer') setInterval(syncTick, 500);
 }
@@ -266,7 +266,7 @@ function connectWs() {
   ws = new WebSocket(me.ws);
   ws.onopen = () => { wsRetry = 0; log('room connected'); for (let i = 0; i < 3; i++) setTimeout(() => wsSend({ t: 'time', c: Date.now() }), i * 300); setInterval(() => { if (ws?.readyState === 1) ws.send('ping'); }, 25000); };
   ws.onmessage = (e) => { if (e.data === 'pong') return; let m; try { m = JSON.parse(e.data); } catch { return; } onRoom(m); };
-  ws.onclose = (e) => { log(`room closed ${e.code} ${e.reason || ''}`); if (e.code === 4001) { alert('You were removed from this party.'); location.href = '/watch'; } else if (e.code === 4000) { $('bLive').textContent = 'ENDED'; $('bLive').className = 'badge'; } else if (wsRetry < 8) setTimeout(connectWs, Math.min(8000, 500 * 2 ** wsRetry++)); };
+  ws.onclose = (e) => { log(`room closed ${e.code} ${e.reason || ''}`); if (e.code === 4001) { alert('You were removed from this party.'); location.href = '/watch'; } else if (e.code === 4000) { try { $('v').pause(); } catch {} clock = { state: 'paused', position: $('v').currentTime, rate: 1, at: Date.now() }; $('bLive').textContent = 'ENDED'; $('bLive').className = 'badge'; } else if (wsRetry < 8) setTimeout(connectWs, Math.min(8000, 500 * 2 ** wsRetry++)); };
 }
 function onRoom(m) {
   switch (m.t) {
@@ -281,7 +281,7 @@ function onRoom(m) {
     case 'slow': $('slow').value = m.slowModeS; if (me.role !== 'host') $('chatHint').textContent = m.slowModeS ? `Slow mode: one message every ${m.slowModeS} s.` : 'One message every 1.5 s.'; break;
     case 'muted': $('chatHint').textContent = m.muted ? 'You are muted by the host.' : 'You can chat again.'; break;
     case 'kicked': break;
-    case 'ended': $('bLive').textContent = 'ENDED'; $('bLive').className = 'badge'; addSys('The host ended the party.'); break;
+    case 'ended': try { $('v').pause(); } catch {} clock = { state: 'paused', position: $('v').currentTime, rate: 1, at: Date.now() }; $('bLive').textContent = 'ENDED'; $('bLive').className = 'badge'; addSys('The host ended the party.'); break;
     case 'error': log(`room refused: ${m.code} ${m.detail || ''}`); if (m.code === 'rate' || m.code === 'muted') $('chatHint').textContent = m.detail; break;
   }
 }

@@ -5,7 +5,9 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat"],
-  "account_id": "89a040897539ed3a26aad722df127442",
+  // Moved to the second account on 2026-10-13. The first account (89a040897539ed3a26aad722df127442) keeps its own copy running:
+  // D1 1581aa2b-8a17-4e4f-ad56-ad9be092b671, KV c4b93b65a7674bfe8d2cd40c6141ac46, Realtime app 2ed55f309dc460453ab0b9157b6496c2.
+  "account_id": "4c18ad534efba2ad881e179b90e8dfb4",
   "observability": { "enabled": true },
 
   "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
@@ -15,10 +17,10 @@
     { "binding": "STREAMS", "bucket_name": "ztor-streams" }
   ],
   "d1_databases": [
-    { "binding": "DB", "database_name": "ztor-video", "database_id": "1581aa2b-8a17-4e4f-ad56-ad9be092b671", "migrations_dir": "migrations" }
+    { "binding": "DB", "database_name": "ztor-video", "database_id": "38e292a4-6c17-42a8-9e6e-49470431cb14", "migrations_dir": "migrations" }
   ],
   "kv_namespaces": [
-    { "binding": "KEYS", "id": "c4b93b65a7674bfe8d2cd40c6141ac46" }
+    { "binding": "KEYS", "id": "a4119e1072e444999d095563ff95e8b5" }
   ],
   "workflows": [
     { "name": "encode-film", "binding": "ENCODE_FILM", "class_name": "EncodeFilmWorkflow" }
@@ -33,7 +35,7 @@
     ]
   },
   "vars": {
-    "R2_ACCOUNT_ID": "89a040897539ed3a26aad722df127442",
+    "R2_ACCOUNT_ID": "4c18ad534efba2ad881e179b90e8dfb4",
     "MASTERS_BUCKET": "ztor-masters",
     "STREAMS_BUCKET": "ztor-streams",
     "PART_SIZE_MB": "100",
@@ -46,7 +48,7 @@
     "DRM_LICENSE_URL_PLAYREADY": "https://af7427b7.drm-playready-licensing.axprod.net/AcquireLicense",
     "DRM_LICENSE_URL_FAIRPLAY": "https://af7427b7.drm-fairplay-licensing.axprod.net/AcquireLicense",
     "DRM_FAIRPLAY_CERT_URL": "https://tools.axinom.com/FPScert/fairplay.cer",
-    "REALTIME_APP_ID": "2ed55f309dc460453ab0b9157b6496c2"     // watch party: Realtime SFU app id (dashboard > Realtime > Serverless SFU). Empty = rtc routes answer 503; chat and sync still work.
+    "REALTIME_APP_ID": "9816c495a36703ebd51dbf233c8cb23f"     // watch party: Realtime SFU app id (dashboard > Realtime > Serverless SFU). Empty = rtc routes answer 503; chat and sync still work.
   }
   // Secrets (wrangler secret put): JWT_SECRET, RUNNER_TOKEN, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, REALTIME_APP_SECRET (watch party), TURN_KEY_API_TOKEN (optional, with TURN_KEY_ID var)
 }
