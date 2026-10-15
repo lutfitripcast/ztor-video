@@ -32,6 +32,7 @@ console.log("en-us at 1:24 ->", JSON.stringify(await cueAt("en-us", 84.2)));
 console.log("off at 1:24   ->", JSON.stringify(await cueAt("off", 84.2)));
 await page.selectOption("#subs", "en-us"); await page.reload(); await page.waitForSelector("#bPlay", { timeout: 15000 }); await page.selectOption("#mode", MODE); await page.click("#bPlay"); await page.waitForFunction(() => document.getElementById("st").textContent === "playing", null, { timeout: 40000 }); await sleep(1500);
 console.log("remembered after reload:", await page.evaluate(() => document.getElementById("subs").value));
+console.log("cues after reload, no toggle ->", JSON.stringify(await cueAt(await page.evaluate(() => document.getElementById("subs").value), 84.2)));
 console.log("log:", (await page.evaluate(() => document.getElementById("log").textContent)).split("\n").filter(l => /subtitle/.test(l)).slice(-4).join(" | "));
 await browser.close(); if (chrome) chrome.kill();
 execSync(`npx wrangler d1 execute ztor-video --remote --command "DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'subs-%@example.com'); DELETE FROM rentals WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'subs-%@example.com'); DELETE FROM users WHERE email LIKE 'subs-%@example.com'"`, { cwd: ROOT, stdio: "ignore", env: { ...process.env, ...PROFILE } });
