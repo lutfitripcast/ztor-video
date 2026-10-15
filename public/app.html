@@ -101,7 +101,7 @@
 // ---- shared helpers -------------------------------------------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const BUILD = '20261015-023403';   // stamped at deploy by scripts/stamp-build.mjs
+const BUILD = '20261015-080135';   // stamped at deploy by scripts/stamp-build.mjs
 let staleReloadAt = 0;
 async function checkBuild(where) {
   try {
@@ -114,6 +114,19 @@ async function checkBuild(where) {
   } catch {}
 }
 checkBuild('load'); setInterval(() => checkBuild('timer'), 5 * 60 * 1000);
+// Subtitles (2026-10-15): WebVTT sidecar tracks listed by the pass or the party join, side-loaded into Shaka after the film
+// loads. Each person picks their own language in the selector (remembered in this browser); the cues follow the media
+// timeline, so seeks, pace changes and the party clock all keep them in step. Host and viewers choose independently.
+async function attachSubtitles(player, list, sel, logFn) {
+  sel.innerHTML = '<option value="off">off</option>';
+  if (!list || !list.length) { sel.disabled = true; return; }
+  sel.disabled = false; const tracks = {};
+  for (const s of list) { try { tracks[s.lang] = await player.addTextTrackAsync(s.url, s.lang, 'subtitles', 'text/vtt', undefined, s.label); const o = document.createElement('option'); o.value = s.lang; o.textContent = s.label; sel.appendChild(o); } catch (e) { logFn(`subtitle ${s.lang} failed to load: ${e.message || e.code}`); } }
+  const apply = (lang) => { if (lang === 'off' || !tracks[lang]) { player.setTextTrackVisibility(false); } else { player.selectTextTrack(tracks[lang]); player.setTextTrackVisibility(true); } try { localStorage.setItem('ztor.subs', lang); } catch {} logFn(`subtitles: ${lang === 'off' ? 'off' : list.find(s => s.lang === lang)?.label}`); };
+  let want = 'off'; try { want = localStorage.getItem('ztor.subs') || 'off'; } catch {}
+  if (want !== 'off' && !tracks[want]) want = 'off';
+  sel.value = want; apply(want); sel.onchange = () => apply(sel.value);
+}
 const api = async (method, path, body, headers = {}) => {
   const r = await fetch(path, { method, headers: { 'content-type': 'application/json', ...headers }, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
   let j = null; try { j = await r.clone().json(); } catch { j = await r.text(); }
@@ -249,7 +262,7 @@ routes.watch = async ([filmId]) => {
         <select id="mode" style="width:auto"><option value="drm">DRM version</option><option value="url" ${f.protections.includes('url') ? '' : 'disabled'}>Protected URL version${f.protections.includes('url') ? '' : ' (not built)'}</option></select>
 </div>
       <p id="policy" hidden></p>
-      <div class="row" style="margin-top:10px"><span>status <b id="st">idle</b></span><span>playing <b id="res">-</b></span><span>quality <select id="q" style="width:auto;padding:3px 8px"><option value="auto">auto</option></select></span><span>buffer <b id="buf">-</b></span><span>licenses <b id="lic">0</b></span></div>
+      <div class="row" style="margin-top:10px"><span>status <b id="st">idle</b></span><span>playing <b id="res">-</b></span><span>quality <select id="q" style="width:auto;padding:3px 8px"><option value="auto">auto</option></select></span><span>subtitles <select id="subs" style="width:auto;padding:3px 8px"><option value="off">off</option></select></span><span>buffer <b id="buf">-</b></span><span>licenses <b id="lic">0</b></span></div>
       <details class="log"><summary>Details and log</summary><pre id="log"></pre></details>
     </div>
     <div class="card"><h2 style="margin-top:0">About this film</h2>
@@ -321,7 +334,7 @@ routes.watch = async ([filmId]) => {
     $('q').onchange = () => { const h = $('q').value; if (h === 'auto') { player.configure({ abr: { enabled: true } }); return; } const t = player.getVariantTracks().find(t => String(t.height) === h); if (t) { player.configure({ abr: { enabled: false } }); player.selectVariantTrack(t, true, SWITCH_MARGIN_S); } };
     clearInterval(timer); timer = setInterval(() => { if (!player) return; const b = player.getBufferedInfo().total, s = player.getStats(); $('buf').textContent = b.length ? `${Math.max(0, b[b.length - 1].end - v.currentTime).toFixed(1)} s, dropped ${s.droppedFrames}/${s.decodedFrames}` : '-'; }, 1000);
     try {
-      $('st').textContent = 'loading'; await player.load(manifestUrl); fillPicker(); showActive();
+      $('st').textContent = 'loading'; await player.load(manifestUrl); fillPicker(); showActive(); attachSubtitles(player, pass.subtitles, $('subs'), log);
       log(`loaded: ${player.getVariantTracks().length} tracks, ${v.duration.toFixed(1)} s, drm ${player.drmInfo()?.keySystem || 'none'}`);
       // Say plainly when the manifest has a rung the licence did not unlock (the 2160p key needs hardware DRM + HDCP).
       // The verdict arrives with the key statuses, a moment after load, so re-check on those events too.
@@ -367,7 +380,7 @@ routes.party = async ([partyId]) => {
       <div class="card">
         <div class="screen"><video id="v" playsinline ${isHost ? 'controls' : 'disablepictureinpicture controlslist="nodownload noplaybackrate"'}></video><video id="cam" autoplay playsinline muted></video><span id="micPill"><i></i> host mic on</span><audio id="hostAudio" autoplay></audio><canvas id="hold"></canvas><div id="over">Watch party ended</div><div id="gate"><button id="bGate" class="primary">Tap to watch with sound</button></div></div>
         ${isHost ? `<div class="ctl"><button id="bCam">Camera</button><button id="bMic">Mic only</button><span style="flex:1"></span><button id="bEnd" class="danger">End party</button></div>` : ''}
-        <div class="row" style="margin-top:10px"><span>player <b id="st">idle</b></span><span>quality <b id="res">-</b></span><span>clock <b id="clk">-</b></span><span>host feed <b id="rtc">-</b></span><span>host bitrate <b id="kbps">-</b></span><span>frames <b id="frames">-</b></span></div>
+        <div class="row" style="margin-top:10px"><span>player <b id="st">idle</b></span><span>quality <b id="res">-</b></span><span>clock <b id="clk">-</b></span><span>host feed <b id="rtc">-</b></span><span>subtitles <select id="subs" style="width:auto;padding:3px 8px"><option value="off">off</option></select></span><span>host bitrate <b id="kbps">-</b></span><span>frames <b id="frames">-</b></span></div>
         <details class="log"><summary>Details and log</summary>
           ${isHost ? `<div class="checks"><div><span>Join without a ticket should be refused</span><span id="c1">-</span></div><div><span>Viewer cannot move the clock</span><span id="c2">-</span></div><div><span>Viewer cannot publish camera / mic</span><span id="c3">-</span></div><div><span>Party ticket does not open another film</span><span id="c4">-</span></div><div><span>Chat rate limit holds</span><span id="c5">-</span></div><div><span>Kicked viewer cannot rejoin</span><span id="c6">-</span></div></div><div class="ctl"><button id="bChecks" class="sm">Run security checks</button></div><p class="hint">Checks need TEST_MODE on the server (a throwaway viewer rents, joins and misbehaves).</p>` : ''}
           <pre id="log"></pre></details>
@@ -416,7 +429,7 @@ async function runParty(me_, isHost) {
   const capLow = (why) => { if (isHost || !player || nativeHls) return; const t = player.getVariantTracks().find(t => t.active); capUntil = Date.now() + 30000; player.configure({ abr: { restrictions: { maxHeight: 480 } } }); log(`stall guard: ${why} at ${t ? t.height + 'p' : '?'}; capped at 480p for 30 s so the next segment is small`); $('res').textContent += ' (capped)'; setTimeout(() => { if (Date.now() >= capUntil && player) { capUntil = 0; player.configure({ abr: { restrictions: { maxHeight: Infinity } } }); log('stall guard: cap lifted, automatic quality again'); } }, 30000); };
   v.addEventListener('waiting', () => { if (isHost || v.paused) return; recentStallAt = Date.now(); clearTimeout(stallTimer); stallTimer = setTimeout(() => { if (!v.paused && v.readyState < 3 && clock?.state === 'playing' && !capUntil) capLow('picture stopped for 1 s'); }, 1000); });
   v.addEventListener('playing', () => { clearTimeout(stallTimer); $('st').textContent = 'playing'; }); v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; }); v.addEventListener('waiting', () => $('st').textContent = 'buffering');
-  try { $('st').textContent = 'loading'; await player.load(me_.hls); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, protected-URL over HLS, no license requests`); } catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
+  try { $('st').textContent = 'loading'; await player.load(me_.hls); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, protected-URL over HLS, no license requests`); attachSubtitles(player, me_.subtitles, $('subs'), log); } catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
   if (!isHost) $('gate').style.display = 'flex';
   $('bGate').onclick = () => { userStarted = true; $('gate').style.display = 'none'; v.muted = false; if (clock?.state === 'playing' && !linkDown) v.play().catch(() => {}); else { v.pause(); $('st').textContent = clock ? 'waiting for host' : 'connecting to room'; } $('cam').play().catch(() => {}); $('hostAudio').play().catch(() => {}); };
   // A viewer's film plays only on the host's clock. Anything else that starts it (native controls in fullscreen, picture in

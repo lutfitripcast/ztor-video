@@ -28,9 +28,10 @@ Audio          One stereo mix as the FIRST audio track, 48 kHz, AAC or PCM.
                Only the first audio track is used; 5.1 is downmixed to
                stereo. One language only for now.
 
-Subtitles      Separate subtitle tracks are not supported yet. If the film
-               needs subtitles, burn them into the picture. Please also
-               send the subtitle file (SRT or VTT) for a later version.
+Subtitles      One WebVTT file per language (UTF-8, starting with WEBVTT),
+               named with the language tag: en-us.vtt, zh-hk.vtt, zh-cn.vtt.
+               SRT is accepted too. Viewers choose the language in the player.
+               Burned-in subtitles are also fine if a film has only one.
 
 File name      ASCII letters, digits, dots and dashes only; no spaces or
                Chinese characters. Example: SPL2_master_2160p.mp4

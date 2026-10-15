@@ -10,7 +10,7 @@ The platform does its own transcoding. A film is uploaded once as a master file 
 - H.264 video, progressive, constant frame rate, 8-bit SDR
 - AAC stereo audio as the first audio track
 - Bitrate: 20 to 40 Mbps for a 1080p master, 50 to 80 Mbps for 2160p
-- Subtitles burned in (separate subtitle tracks are not supported yet)
+- Subtitles: separate WebVTT files per language (section 6a), or burned in
 - ASCII file name, no spaces, for example `SPL2_master_2160p.mp4`
 
 Full detail, checksums and the handover sheet in FILM_DELIVERY_SPEC.txt.
@@ -119,6 +119,20 @@ fairplay:  https://ztor-video.eric-tam.workers.dev/license/fairplay   (certifica
 ```
 
 Chrome, Edge and Android play the HLS with Widevine or PlayReady; Safari and iPhones with FairPlay. `mode: "url"` returns the watch-party copy instead: the same HLS, no licence, every link signed.
+
+## 6a. Subtitles
+
+Subtitles are separate WebVTT files, one per language, added after the film is uploaded (before or after encoding, it does not matter). Viewers and the host each pick their own language in the player's "subtitles" selector; the choice is remembered on that device, and the cues follow the playback position, including seeks and watch-party sync.
+
+File: UTF-8 WebVTT (`.vtt`, starting with `WEBVTT`); an SRT file is accepted and converted. Name it with the language tag: `en-us.vtt`, `zh-hk.vtt`, `zh-cn.vtt`, `ms.vtt`, `id.vtt`.
+
+Upload one file per language with the runner token:
+
+```
+curl -X PUT "https://ztor-video.eric-tam.workers.dev/admin/films/<FILM_ID>/subtitles/zh-hk" -H "Authorization: Bearer <runner token>" -H "Content-Type: text/vtt" --data-binary @zh-hk.vtt
+```
+
+The answer reports the number of cues. Uploading the same language again replaces it; `DELETE` on the same URL removes it. The pass and the party join then list the tracks under `subtitles`, and the player shows them.
 
 ## 7. Remove a film
 

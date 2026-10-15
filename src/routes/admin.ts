@@ -31,6 +31,19 @@ export async function handleAdmin(req: Request, env: Env, url: URL, seg: string[
     return json({ ok: true, workflow, version: film.version });
   }
   // cleanup: delete a film's master, every stream version and its key material; keep the D1 row as 'deleted'
+  // subtitles: PUT /admin/films/{id}/subtitles/{lang} with a WebVTT body (or SRT, converted here); DELETE removes one
+  if ((req.method === "PUT" || req.method === "DELETE") && seg[1] === "films" && seg[2] && seg[3] === "subtitles" && seg[4]) {
+    const lang = seg[4].toLowerCase(); if (!/^[a-z]{2,3}(-[a-z0-9]{2,8})?$/.test(lang)) return err("language tag like en, en-us, zh-hk", 400);
+    const film = await env.DB.prepare("SELECT version FROM films WHERE id=?").bind(seg[2]).first<any>();
+    if (!film) return err("film not found", 404);
+    const key = `films/${seg[2]}/v${film.version}/subs/${lang}.vtt`;
+    if (req.method === "DELETE") { await env.STREAMS.delete(key); return json({ ok: true, removed: key }); }
+    let text = (await req.text()).replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+    if (!/^WEBVTT/.test(text)) text = "WEBVTT\n\n" + text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");   // SRT -> WebVTT
+    if (text.length > 5_000_000) return err("subtitle file too large", 413);
+    await env.STREAMS.put(key, text, { httpMetadata: { contentType: "text/vtt; charset=utf-8" } });
+    return json({ ok: true, key, cues: (text.match(/-->/g) || []).length });
+  }
   if (req.method === "DELETE" && seg[1] === "films" && seg[2]) {
     const film = await env.DB.prepare("SELECT source_key FROM films WHERE id=?").bind(seg[2]).first<any>();
     if (!film) return err("film not found", 404);

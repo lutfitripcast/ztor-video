@@ -52,7 +52,7 @@ export async function handleMedia(req: Request, env: Env, url: URL, seg: string[
     h.set("etag", obj.httpEtag);
     h.set("accept-ranges", "bytes");
     h.set("access-control-allow-origin", "*");
-    h.set("cache-control", urlVersion ? "private, max-age=14400" : isManifest(rel) ? "private, max-age=60" : "public, max-age=31536000, immutable");
+    h.set("cache-control", /\/subs\/[^/]+\.vtt$/i.test(rel) ? "public, max-age=3600" : urlVersion ? "private, max-age=14400" : isManifest(rel) ? "private, max-age=60" : "public, max-age=31536000, immutable");
     h.set("content-length", String(obj.size));
     return new Response(req.method === "HEAD" ? null : obj.body, { headers: h });
   }
