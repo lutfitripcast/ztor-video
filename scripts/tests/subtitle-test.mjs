@@ -12,10 +12,20 @@ await page.evaluate(async (id) => (await fetch(`/api/rent/${id}`, { method: "POS
 await page.goto(`${B}/app#/watch/${FILM}`); await page.waitForSelector("#bPlay", { timeout: 15000 }); await page.selectOption("#mode", "url"); await page.click("#bPlay");
 await page.waitForFunction(() => document.getElementById("st").textContent === "playing", null, { timeout: 40000 }); await sleep(1500);
 const opts = await page.evaluate(() => [...document.querySelectorAll("#subs option")].map(o => `${o.value}=${o.textContent}`)); console.log("selector options:", opts.join(", "));
-const cueAt = async (lang, t) => { await page.selectOption("#subs", lang); await page.evaluate((t) => { document.getElementById("v").currentTime = t; }, t); await sleep(2500); return page.evaluate(() => { const v = document.getElementById("v"); const out = []; for (const tr of v.textTracks) if (tr.mode === "showing") for (const c of tr.activeCues || []) out.push(`${tr.language}: "${c.text}"`); return { t: v.currentTime.toFixed(1), shown: out, playing: !v.paused }; }); };
-console.log("zh-hk at 1:19 ->", JSON.stringify(await cueAt("zh-hk", 79.5)));
-console.log("en-us at 1:24 ->", JSON.stringify(await cueAt("en-us", 84.8)));
-console.log("off at 1:24   ->", JSON.stringify(await cueAt("off", 84.8)));
+const cueAt = async (lang, t) => {
+  await page.selectOption("#subs", lang); await page.evaluate((t) => { document.getElementById("v").currentTime = t; }, t);
+  const seen = new Set(); let now = t;
+  for (let i = 0; i < 100; i++) {   // wait for playback to resume after the seek, then watch about 3 s of film for cues
+    await sleep(200);
+    const r = await page.evaluate(() => { const v = document.getElementById("v"); const out = []; for (const tr of v.textTracks) if (tr.mode === "showing") for (const c of tr.activeCues || []) out.push(c.text); let ahead = 0; try { const b = v.buffered; if (b.length) ahead = b.end(b.length - 1) - v.currentTime; } catch {} return { t: v.currentTime, cues: out, paused: v.paused, rs: v.readyState, ahead: ahead.toFixed(1), st: document.getElementById("st").textContent }; });
+    now = r.t; r.cues.forEach(c => seen.add(c)); if (i === 10 || i === 50) console.log(`   after ${i * 0.2} s: t=${now.toFixed(1)} paused=${r.paused} readyState=${r.rs} buffered ahead ${r.ahead} s status "${r.st}"`);
+    if (now > t + 3) break;
+  }
+  return { seekedTo: t, endedAt: now.toFixed(1), cuesSeen: [...seen] };
+};
+console.log("zh-hk at 1:19 ->", JSON.stringify(await cueAt("zh-hk", 79.0)));
+console.log("en-us at 1:24 ->", JSON.stringify(await cueAt("en-us", 84.2)));
+console.log("off at 1:24   ->", JSON.stringify(await cueAt("off", 84.2)));
 await page.selectOption("#subs", "en-us"); await page.reload(); await page.waitForSelector("#bPlay", { timeout: 15000 }); await page.selectOption("#mode", "url"); await page.click("#bPlay"); await page.waitForFunction(() => document.getElementById("st").textContent === "playing", null, { timeout: 40000 }); await sleep(1500);
 console.log("remembered after reload:", await page.evaluate(() => document.getElementById("subs").value));
 console.log("log:", (await page.evaluate(() => document.getElementById("log").textContent)).split("\n").filter(l => /subtitle/.test(l)).slice(-4).join(" | "));
