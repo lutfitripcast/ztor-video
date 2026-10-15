@@ -56,6 +56,9 @@
   #gate{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6)}
   #gate button{font-size:17px;padding:13px 24px}
   #hold{position:absolute;inset:0;width:100%;height:100%;display:none;background:#000;object-fit:contain;z-index:2}
+  .caps{position:absolute;inset:0;pointer-events:none;z-index:1}
+  .caps .shaka-text-container{bottom:6%!important}
+  .caps .shaka-text-container span{font-size:clamp(14px,2.6vw,26px);line-height:1.35;background:rgba(0,0,0,.65);color:#fff;padding:2px 8px;border-radius:4px;text-shadow:0 1px 2px #000}
   #over{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000;color:#fff;font-size:22px;font-weight:700;letter-spacing:.3px;z-index:3}
   .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
   .ctl{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
@@ -101,7 +104,7 @@
 // ---- shared helpers -------------------------------------------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const BUILD = '20261015-080135';   // stamped at deploy by scripts/stamp-build.mjs
+const BUILD = '20261015-090945';   // stamped at deploy by scripts/stamp-build.mjs
 let staleReloadAt = 0;
 async function checkBuild(where) {
   try {
@@ -117,16 +120,18 @@ checkBuild('load'); setInterval(() => checkBuild('timer'), 5 * 60 * 1000);
 // Subtitles (2026-10-15): WebVTT sidecar tracks listed by the pass or the party join, side-loaded into Shaka after the film
 // loads. Each person picks their own language in the selector (remembered in this browser); the cues follow the media
 // timeline, so seeks, pace changes and the party clock all keep them in step. Host and viewers choose independently.
-async function attachSubtitles(player, list, sel, logFn) {
+// opts: remember (keep the choice in this browser), locked (the selector only displays; the choice comes from elsewhere),
+// onChange (called when the person picks a language). Returns apply(lang) so a party can set the language from the room.
+async function attachSubtitles(player, list, sel, logFn, opts = {}) {
   sel.innerHTML = '<option value="off">off</option>';
-  if (!list || !list.length) { sel.disabled = true; return; }
-  sel.disabled = false; const tracks = {};
+  if (!list || !list.length) { sel.disabled = true; return () => {}; }
+  sel.disabled = !!opts.locked; const tracks = {};
   for (const s of list) { try { tracks[s.lang] = await player.addTextTrackAsync(s.url, s.lang, 'subtitles', 'text/vtt', undefined, s.label); const o = document.createElement('option'); o.value = s.lang; o.textContent = s.label; sel.appendChild(o); } catch (e) { logFn(`subtitle ${s.lang} failed to load: ${e.message || e.code}`); } }
-  const apply = (lang) => { if (lang === 'off' || !tracks[lang]) { player.setTextTrackVisibility(false); } else { player.selectTextTrack(tracks[lang]); player.setTextTrackVisibility(true); } try { localStorage.setItem('ztor.subs', lang); } catch {} logFn(`subtitles: ${lang === 'off' ? 'off' : list.find(s => s.lang === lang)?.label}`); };
-  let want = 'off'; try { want = localStorage.getItem('ztor.subs') || 'off'; } catch {}
-  if (want !== 'off' && !tracks[want]) want = 'off';
-  sel.value = want; apply(want); sel.onchange = () => apply(sel.value);
+  const apply = (lang) => { if (lang !== 'off' && !tracks[lang]) lang = 'off'; sel.value = lang; if (lang === 'off') player.setTextTrackVisibility(false); else { player.selectTextTrack(tracks[lang]); player.setTextTrackVisibility(true); } if (opts.remember) { try { localStorage.setItem('ztor.subs', lang); } catch {} } logFn(`subtitles: ${lang === 'off' ? 'off' : list.find(s => s.lang === lang)?.label}${opts.locked ? ' (set by the host)' : ''}`); return lang; };
+  if (!opts.locked) sel.onchange = () => { const l = apply(sel.value); if (opts.onChange) opts.onChange(l); };
+  return apply;
 }
+const rememberedSubtitle = () => { try { return localStorage.getItem('ztor.subs') || 'off'; } catch { return 'off'; } };
 const api = async (method, path, body, headers = {}) => {
   const r = await fetch(path, { method, headers: { 'content-type': 'application/json', ...headers }, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
   let j = null; try { j = await r.clone().json(); } catch { j = await r.text(); }
@@ -257,7 +262,7 @@ routes.watch = async ([filmId]) => {
   if (!f) { toast('film not found', 'bad'); location.hash = '#/home'; return; }
   $('view').innerHTML = `<div class="bar"><a href="#/home">&larr; Home</a><h1 style="margin:0">${esc(f.title)}</h1></div>
     <div class="stage"><div class="card">
-      <div class="screen"><video id="v" controls playsinline></video></div>
+      <div class="screen"><video id="v" controls playsinline></video><div class="caps" id="caps"></div></div>
       <div class="ctl"><button id="bPlay" class="primary">Play</button><button id="bStop">Stop</button>
         <select id="mode" style="width:auto"><option value="drm">DRM version</option><option value="url" ${f.protections.includes('url') ? '' : 'disabled'}>Protected URL version${f.protections.includes('url') ? '' : ' (not built)'}</option></select>
 </div>
@@ -286,6 +291,9 @@ routes.watch = async ([filmId]) => {
     if (player) await player.destroy();
     lic = 0; $('lic').textContent = '0';
     player = new shaka.Player(); await player.attach($('v'));
+    // Captions are drawn by Shaka as page elements (same look in Safari and Chrome; Safari does not reliably draw cues of
+    // script-added tracks on a video without native controls), inside the .caps layer over the picture.
+    player.configure({ textDisplayFactory: () => new shaka.text.UITextDisplayer($('v'), $('caps')) });
     const urlMode = pass.mode === 'url', vd = urlMode ? null : pass.vendorDrm;
     const drmCfg = urlMode ? {} : vd ? { servers: { 'com.widevine.alpha': vd.widevine, 'com.microsoft.playready': vd.playready, 'com.apple.fps': vd.fairplay }, advanced: { 'com.apple.fps': { serverCertificateUri: vd.fairplayCertificate } } } : { servers: { 'org.w3.clearkey': pass.licenseUrl } };
     // HLS only (2026-10-13, user's decision): Safari decrypts with FairPlay, Chrome/Edge/Android with Widevine or PlayReady,
@@ -334,7 +342,7 @@ routes.watch = async ([filmId]) => {
     $('q').onchange = () => { const h = $('q').value; if (h === 'auto') { player.configure({ abr: { enabled: true } }); return; } const t = player.getVariantTracks().find(t => String(t.height) === h); if (t) { player.configure({ abr: { enabled: false } }); player.selectVariantTrack(t, true, SWITCH_MARGIN_S); } };
     clearInterval(timer); timer = setInterval(() => { if (!player) return; const b = player.getBufferedInfo().total, s = player.getStats(); $('buf').textContent = b.length ? `${Math.max(0, b[b.length - 1].end - v.currentTime).toFixed(1)} s, dropped ${s.droppedFrames}/${s.decodedFrames}` : '-'; }, 1000);
     try {
-      $('st').textContent = 'loading'; await player.load(manifestUrl); fillPicker(); showActive(); attachSubtitles(player, pass.subtitles, $('subs'), log);
+      $('st').textContent = 'loading'; await player.load(manifestUrl); fillPicker(); showActive(); attachSubtitles(player, pass.subtitles, $('subs'), log, { remember: true }).then(apply => apply(rememberedSubtitle()));
       log(`loaded: ${player.getVariantTracks().length} tracks, ${v.duration.toFixed(1)} s, drm ${player.drmInfo()?.keySystem || 'none'}`);
       // Say plainly when the manifest has a rung the licence did not unlock (the 2160p key needs hardware DRM + HDCP).
       // The verdict arrives with the key statuses, a moment after load, so re-check on those events too.
@@ -378,7 +386,7 @@ routes.party = async ([partyId]) => {
   $('view').innerHTML = `<div class="bar"><a href="#/home">&larr; Home</a><span class="badge" id="bLive">CONNECTING</span><h1 style="margin:0;font-size:20px">${esc(P_.title)}</h1><span class="dim">${esc(P_.filmTitle)}</span><span style="flex:1"></span><span><b id="viewers">0</b> <span class="dim">watching</span></span><span class="dim" id="sync"></span></div>
     <div class="stage"><div>
       <div class="card">
-        <div class="screen"><video id="v" playsinline ${isHost ? 'controls' : 'disablepictureinpicture controlslist="nodownload noplaybackrate"'}></video><video id="cam" autoplay playsinline muted></video><span id="micPill"><i></i> host mic on</span><audio id="hostAudio" autoplay></audio><canvas id="hold"></canvas><div id="over">Watch party ended</div><div id="gate"><button id="bGate" class="primary">Tap to watch with sound</button></div></div>
+        <div class="screen"><video id="v" playsinline ${isHost ? 'controls' : 'disablepictureinpicture controlslist="nodownload noplaybackrate"'}></video><div class="caps" id="caps"></div><video id="cam" autoplay playsinline muted></video><span id="micPill"><i></i> host mic on</span><audio id="hostAudio" autoplay></audio><canvas id="hold"></canvas><div id="over">Watch party ended</div><div id="gate"><button id="bGate" class="primary">Tap to watch with sound</button></div></div>
         ${isHost ? `<div class="ctl"><button id="bCam">Camera</button><button id="bMic">Mic only</button><span style="flex:1"></span><button id="bEnd" class="danger">End party</button></div>` : ''}
         <div class="row" style="margin-top:10px"><span>player <b id="st">idle</b></span><span>quality <b id="res">-</b></span><span>clock <b id="clk">-</b></span><span>host feed <b id="rtc">-</b></span><span>subtitles <select id="subs" style="width:auto;padding:3px 8px"><option value="off">off</option></select></span><span>host bitrate <b id="kbps">-</b></span><span>frames <b id="frames">-</b></span></div>
         <details class="log"><summary>Details and log</summary>
@@ -399,6 +407,7 @@ async function runParty(me_, isHost) {
   checkBuild('party');
   const P = (path) => `/party/${me_.partyId}${path}`;
   const auth = () => ({ Authorization: 'Bearer ' + me_.token });
+  let subsApply = null, roomSubtitle = 'off';   // the party's subtitle language (host-chosen); applied once the tracks are attached
   let ws = null, player = null, clock = null, offset = 0, userStarted = isHost, hostTracks = null, wsRetry = 0, closed = false;
   const timers = [];
   log(`joined "${me_.title}" as ${me_.role} (${me_.you.name}). Realtime SFU ${me_.realtime ? 'on' : 'OFF'}. ${me_.policy.sync}.`);
@@ -406,6 +415,7 @@ async function runParty(me_, isHost) {
   // film
   shaka.polyfill.installAll();
   player = new shaka.Player(); await player.attach($('v'));
+  player.configure({ textDisplayFactory: () => new shaka.text.UITextDisplayer($('v'), $('caps')) });   // captions as page elements, same in every browser
   // Quality selection tuned for a connection that drops mid-film (2026-10-10): switch every 2 s instead of 8, step down at 80% of
   // measured bandwidth, keep 30 s buffered, prefetch the next segment. Shaka aborts a segment in flight when a lower rung would finish sooner.
   // Safari (2026-10-14): Safari's own HLS player was tried for the party and rejected the same day: it picks the rung by the size of
@@ -429,7 +439,7 @@ async function runParty(me_, isHost) {
   const capLow = (why) => { if (isHost || !player || nativeHls) return; const t = player.getVariantTracks().find(t => t.active); capUntil = Date.now() + 30000; player.configure({ abr: { restrictions: { maxHeight: 480 } } }); log(`stall guard: ${why} at ${t ? t.height + 'p' : '?'}; capped at 480p for 30 s so the next segment is small`); $('res').textContent += ' (capped)'; setTimeout(() => { if (Date.now() >= capUntil && player) { capUntil = 0; player.configure({ abr: { restrictions: { maxHeight: Infinity } } }); log('stall guard: cap lifted, automatic quality again'); } }, 30000); };
   v.addEventListener('waiting', () => { if (isHost || v.paused) return; recentStallAt = Date.now(); clearTimeout(stallTimer); stallTimer = setTimeout(() => { if (!v.paused && v.readyState < 3 && clock?.state === 'playing' && !capUntil) capLow('picture stopped for 1 s'); }, 1000); });
   v.addEventListener('playing', () => { clearTimeout(stallTimer); $('st').textContent = 'playing'; }); v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; }); v.addEventListener('waiting', () => $('st').textContent = 'buffering');
-  try { $('st').textContent = 'loading'; await player.load(me_.hls); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, protected-URL over HLS, no license requests`); attachSubtitles(player, me_.subtitles, $('subs'), log); } catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
+  try { $('st').textContent = 'loading'; await player.load(me_.hls); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, protected-URL over HLS, no license requests`); attachSubtitles(player, me_.subtitles, $('subs'), log, isHost ? { remember: true, onChange: (l) => wsSend({ t: 'subtitle', lang: l }) } : { locked: true }).then(apply => { subsApply = apply; if (isHost) { const l = apply(roomSubtitle !== 'off' ? roomSubtitle : rememberedSubtitle()); wsSend({ t: 'subtitle', lang: l }); } else apply(roomSubtitle); }); } catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
   if (!isHost) $('gate').style.display = 'flex';
   $('bGate').onclick = () => { userStarted = true; $('gate').style.display = 'none'; v.muted = false; if (clock?.state === 'playing' && !linkDown) v.play().catch(() => {}); else { v.pause(); $('st').textContent = clock ? 'waiting for host' : 'connecting to room'; } $('cam').play().catch(() => {}); $('hostAudio').play().catch(() => {}); };
   // A viewer's film plays only on the host's clock. Anything else that starts it (native controls in fullscreen, picture in
@@ -566,11 +576,12 @@ async function runParty(me_, isHost) {
   timers.push(setInterval(() => { if (ws?.readyState === 1 && (Date.now() - connectedAt < 60000 || (Date.now() - connectedAt) % 30000 < 5000)) pingTime(); }, 5000));
   const onRoom = (m) => {
     switch (m.t) {
-      case 'hello': takeClock(m.clock, m.serverTime); if (isHost && liveList().length) api('PUT', P('/rtc/tracks'), { tracks: liveList() }, auth()).then(r => log(`re-announced ${liveList().length} live track(s) after reconnect -> ${r.status}`)); setPinned(m.pinned); $('viewers').textContent = m.viewers; if ($('slow')) $('slow').value = m.slowModeS; (m.recent || []).forEach(addMsg); setLive(m.hostTracks, m.hostOnline); if (m.hostTracks) pullTracks(m.hostTracks); if (m.muted) $('chatHint').textContent = 'You are muted by the host.'; break;
+      case 'hello': roomSubtitle = m.subtitle || 'off'; if (subsApply && !isHost) subsApply(roomSubtitle); takeClock(m.clock, m.serverTime); if (isHost && liveList().length) api('PUT', P('/rtc/tracks'), { tracks: liveList() }, auth()).then(r => log(`re-announced ${liveList().length} live track(s) after reconnect -> ${r.status}`)); setPinned(m.pinned); $('viewers').textContent = m.viewers; if ($('slow')) $('slow').value = m.slowModeS; (m.recent || []).forEach(addMsg); setLive(m.hostTracks, m.hostOnline); if (m.hostTracks) pullTracks(m.hostTracks); if (m.muted) $('chatHint').textContent = 'You are muted by the host.'; break;
       case 'time': { const now = Date.now(); const rtt = now - m.c; if (!bestPing || rtt <= bestPing.rtt || now - bestPing.at > 60000) { bestPing = { rtt, at: now }; offset = m.s - (m.c + rtt / 2); } if (!pingKnown) { pingKnown = true; if (isHost && clock) takeClock(clock, clock.at + (Date.now() - clock.local)); } break; }
       case 'chat': addMsg(m.msg); break;
       case 'system': addSys(m.text); break;
       case 'pin': setPinned(m.pinned); break;
+      case 'subtitle': roomSubtitle = m.lang || 'off'; if (subsApply) subsApply(roomSubtitle); break;
       case 'clock': takeClock(m.clock, m.s); break;
       case 'roster': $('viewers').textContent = m.viewers; setLive(hostTracks, m.hostOnline); break;
       case 'tracks': setLive(m.hostTracks, true); if (m.hostTracks) pullTracks(m.hostTracks); else if (!isHost) clearRemote(); break;

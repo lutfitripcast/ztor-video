@@ -34,6 +34,7 @@ export class PartyRoom extends DurableObject<Env> {
   banned = new Set<string>();
   muted = new Set<string>();
   slowModeS = 0;
+  subtitle = "off";   // the party's subtitle language, chosen by the host, followed by every viewer (2026-10-15)
   seq = 0;
   recent: ChatMsg[] = [];
   // in-memory only (lost on hibernation, which is fine): rate limiting and roster change detection
@@ -43,7 +44,7 @@ export class PartyRoom extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     ctx.blockConcurrencyWhile(async () => {
-      const s = await ctx.storage.get<any>(["meta", "clock", "pinned", "hostTracks", "banned", "muted", "slowModeS", "seq", "recent"]) as Map<string, any>;
+      const s = await ctx.storage.get<any>(["meta", "clock", "pinned", "hostTracks", "banned", "muted", "slowModeS", "seq", "recent", "subtitle"]) as Map<string, any>;
       this.meta = s.get("meta") ?? null;
       this.clock = s.get("clock") ?? this.clock;
       this.pinned = s.get("pinned") ?? null;
@@ -51,6 +52,7 @@ export class PartyRoom extends DurableObject<Env> {
       this.banned = new Set(s.get("banned") ?? []);
       this.muted = new Set(s.get("muted") ?? []);
       this.slowModeS = s.get("slowModeS") ?? 0;
+      this.subtitle = s.get("subtitle") ?? "off";
       this.seq = s.get("seq") ?? 0;
       this.recent = s.get("recent") ?? [];
     });
@@ -89,7 +91,7 @@ export class PartyRoom extends DurableObject<Env> {
       const [client, server] = [pair[0], pair[1]];
       this.ctx.acceptWebSocket(server, [`u:${userId}`, `r:${role}`]);
       server.serializeAttachment({ userId, name, role, deviceId, connectedAt: Date.now() } satisfies Attachment);
-      send(server, { t: "hello", you: { userId, name, role }, party: this.meta, clock: this.clock, pinned: this.pinned, hostTracks: this.hostTracks,
+      send(server, { t: "hello", you: { userId, name, role }, party: this.meta, clock: this.clock, pinned: this.pinned, hostTracks: this.hostTracks, subtitle: this.subtitle,
         slowModeS: this.slowModeS, muted: this.muted.has(userId), recent: this.recent, ...this.roster(), serverTime: Date.now() });
       await this.ensureAlarm();
       return new Response(null, { status: 101, webSocket: client });
@@ -190,6 +192,13 @@ export class PartyRoom extends DurableObject<Env> {
         await this.ctx.storage.put("muted", [...this.muted]);
         for (const s of this.ctx.getWebSockets(`u:${target}`)) send(s, { t: "muted", muted: m.t === "mute" });
         return this.action(a.userId, m.t, target);
+      }
+      case "subtitle": {   // host picks the party's subtitle language; everyone follows
+        if (!host) return forbid();
+        const lang = String(m.lang ?? "off").toLowerCase().slice(0, 16);
+        if (!/^(off|[a-z]{2,3}(-[a-z0-9]{2,8})?)$/.test(lang)) return send(ws, { t: "error", code: "bad", detail: "subtitle: language tag or off" });
+        this.subtitle = lang; await this.ctx.storage.put("subtitle", lang);
+        return this.broadcast({ t: "subtitle", lang });
       }
       case "slow": {
         if (!host) return forbid();

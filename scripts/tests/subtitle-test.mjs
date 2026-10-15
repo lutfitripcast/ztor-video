@@ -17,7 +17,7 @@ const cueAt = async (lang, t) => {
   const seen = new Set(); let now = t;
   for (let i = 0; i < 100; i++) {   // wait for playback to resume after the seek, then watch about 3 s of film for cues
     await sleep(200);
-    const r = await page.evaluate(() => { const v = document.getElementById("v"); const out = []; for (const tr of v.textTracks) if (tr.mode === "showing") for (const c of tr.activeCues || []) out.push(c.text); let ahead = 0; try { const b = v.buffered; if (b.length) ahead = b.end(b.length - 1) - v.currentTime; } catch {} return { t: v.currentTime, cues: out, paused: v.paused, rs: v.readyState, ahead: ahead.toFixed(1), st: document.getElementById("st").textContent }; });
+    const r = await page.evaluate(() => { const v = document.getElementById("v"); const out = []; const caps = document.querySelector("#caps"); if (caps && caps.textContent.trim()) out.push(caps.textContent.trim()); for (const tr of v.textTracks) if (tr.mode === "showing") for (const c of tr.activeCues || []) out.push(c.text); let ahead = 0; try { const b = v.buffered; if (b.length) ahead = b.end(b.length - 1) - v.currentTime; } catch {} return { t: v.currentTime, cues: out, paused: v.paused, rs: v.readyState, ahead: ahead.toFixed(1), st: document.getElementById("st").textContent }; });
     now = r.t; r.cues.forEach(c => seen.add(c)); if (i === 10 || i === 50) console.log(`   after ${i * 0.2} s: t=${now.toFixed(1)} paused=${r.paused} readyState=${r.rs} buffered ahead ${r.ahead} s status "${r.st}"`);
     if (now > t + 3) break;
   }
