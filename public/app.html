@@ -56,8 +56,8 @@
   #gate{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6)}
   #gate button{font-size:17px;padding:13px 24px}
   #hold{position:absolute;inset:0;width:100%;height:100%;display:none;background:#000;object-fit:contain;z-index:2}
-  .caps{position:absolute;inset:0;pointer-events:none;z-index:1}
-  .caps .shaka-text-container{bottom:6%!important}
+  .caps{position:absolute;inset:0;pointer-events:none;z-index:2}   /* above the picture; the drag snapshot (#hold, later in the DOM) and the ended screen (#over, 3) still cover it */
+  .caps .shaka-text-container{position:absolute!important;left:0;right:0;top:0;bottom:6%;display:flex!important;flex-direction:column;justify-content:flex-end;align-items:center;pointer-events:none}
   .caps .shaka-text-container span{font-size:clamp(14px,2.6vw,26px);line-height:1.35;background:rgba(0,0,0,.65);color:#fff;padding:2px 8px;border-radius:4px;text-shadow:0 1px 2px #000}
   #over{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000;color:#fff;font-size:22px;font-weight:700;letter-spacing:.3px;z-index:3}
   .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
@@ -104,7 +104,7 @@
 // ---- shared helpers -------------------------------------------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const BUILD = '20261015-090945';   // stamped at deploy by scripts/stamp-build.mjs
+const BUILD = '20261015-093639';   // stamped at deploy by scripts/stamp-build.mjs
 let staleReloadAt = 0;
 async function checkBuild(where) {
   try {
