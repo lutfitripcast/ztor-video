@@ -104,7 +104,7 @@
 // ---- shared helpers -------------------------------------------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const BUILD = '20261015-093639';   // stamped at deploy by scripts/stamp-build.mjs
+const BUILD = '20261015-095712';   // stamped at deploy by scripts/stamp-build.mjs
 let staleReloadAt = 0;
 async function checkBuild(where) {
   try {
@@ -460,6 +460,14 @@ async function runParty(me_, isHost) {
   // Host state comes from motion, not from readyState or events: the picture counts as playing only while currentTime has
   // advanced within the last 150 ms (polled every 50 ms). Decoder ramps after a seek, stalls the browser does not flag, and
   // 'playing' events that precede real motion are all reported as paused/buffering, so viewers wait instead of running ahead.
+  // Frame on glass (2026-10-15): requestVideoFrameCallback gives the media time of the frame just painted. The host reports
+  // that as its position, and the viewer measures itself by it, so the sync compares pictures on screen, not player clocks,
+  // which run ahead of the screen by a browser-dependent amount (largest on Safari). Falls back to currentTime when the call
+  // is missing or no frame was painted in the last 300 ms (tab hidden, paused, stalled).
+  const glass = { mediaTime: -1, at: 0 };
+  if (v.requestVideoFrameCallback) { const onFrame = (now, meta) => { glass.mediaTime = meta.mediaTime; glass.at = performance.now(); v.requestVideoFrameCallback(onFrame); }; v.requestVideoFrameCallback(onFrame); }
+  const glassTime = () => { const age = performance.now() - glass.at; return glass.mediaTime >= 0 && age < 300 && !v.paused ? glass.mediaTime + age / 1000 * (v.playbackRate || 1) : v.currentTime; };
+  const displayLag = () => (glass.mediaTime >= 0 && performance.now() - glass.at < 300 ? v.currentTime - glassTime() : null);
   let motion = { t: -1, at: 0 }, wasMoving = false, pollAt = 0, pollGap = 50;
   // The stall threshold follows the real poll interval: 150 ms (about 3 frames) in a visible tab, longer when the browser
   // throttles timers in a background tab, so a backgrounded host is never mistaken for a stalled one.
@@ -471,7 +479,7 @@ async function runParty(me_, isHost) {
   let hostReady = !isHost, pingKnown = false;   // host: no clock leaves this page until a ping is answered and the player is positioned (reload case)
   let lastSend = 0, sendTimer = null;
   let lastSentState = '', lastSentPos = -1;
-  const sendClock = () => { if (!hostReady || !pingKnown) return; const dt = Date.now() - lastSend; if (dt < 80) { if (!sendTimer) sendTimer = setTimeout(() => { sendTimer = null; sendClock(); }, 80 - dt); return; } lastSend = Date.now(); const state = hostState(); if (state !== lastSentState || Math.abs(v.currentTime - lastSentPos) > 2) log(`sent clock: ${state}${state === 'paused' && !v.paused ? ' (buffering)' : ''} @ ${v.currentTime.toFixed(2)} s`); lastSentState = state; lastSentPos = v.currentTime; wsSend({ t: 'clock', state, position: v.currentTime, rate: v.playbackRate, up: Math.round(oneWay()), rtt: hostRttMs, why: state === 'paused' && !v.paused && !v.ended ? 'buffering' : undefined }); $('clk').textContent = `${state} @ ${v.currentTime.toFixed(1)} s (you)`; };
+  const sendClock = () => { if (!hostReady || !pingKnown) return; const dt = Date.now() - lastSend; if (dt < 80) { if (!sendTimer) sendTimer = setTimeout(() => { sendTimer = null; sendClock(); }, 80 - dt); return; } lastSend = Date.now(); const state = hostState(); if (state !== lastSentState || Math.abs(v.currentTime - lastSentPos) > 2) log(`sent clock: ${state}${state === 'paused' && !v.paused ? ' (buffering)' : ''} @ ${v.currentTime.toFixed(2)} s`); lastSentState = state; lastSentPos = v.currentTime; wsSend({ t: 'clock', state, position: state === 'playing' ? glassTime() : v.currentTime, rate: v.playbackRate, up: Math.round(oneWay()), rtt: hostRttMs, why: state === 'paused' && !v.paused && !v.ended ? 'buffering' : undefined }); $('clk').textContent = `${state} @ ${v.currentTime.toFixed(1)} s (you)`; };
   if (isHost) { ['play', 'playing', 'pause', 'seeking', 'seeked', 'waiting', 'ratechange', 'ended'].forEach(ev => v.addEventListener(ev, sendClock)); timers.push(setInterval(sendClock, 1000)); }
   let voiceMs = 0, clockQ = [], scrub = { pos: -1, at: 0 };   // scrub: last position change while paused, for the 1 s settle
   const LAG_MIN_MS = isSafari ? 300 : 150;   // Safari: wider margin; it runs at rate 1 and is corrected only by a rare seek   // viewers run at least this far behind the host while playing: a host stall is detected within ~150 ms + transit, so a viewer can pass the host's frozen frame by a frame or two at most
@@ -508,7 +516,7 @@ async function runParty(me_, isHost) {
     if (!clock || !player || isNaN(v.duration)) return;
     // no live link to the room (socket closed, or silent for 15 s while the host should be sending every second): wait, do not extrapolate
     if (!isHost && clock.state === 'playing' && (linkDown || ws?.readyState !== 1 || Date.now() - lastRoomMsgAt > 15000)) { if (!v.paused) { v.pause(); log('room link down: film paused until the room is back'); } $('st').textContent = 'reconnecting'; return; }
-    const exp = Math.min(expected(), v.duration), d = v.currentTime - exp;
+    const exp = Math.min(expected(), v.duration), d = (clock.state === 'playing' ? glassTime() : v.currentTime) - exp;
     $('clk').textContent = `${clock.state} @ ${exp.toFixed(1)} s, behind host by ${(lagMs() / 1000).toFixed(2)} s${voiceMs ? ' (voice)' : ''}`; $('sync').textContent = (() => { const vs = d - lagMs() / 1000; return `vs host ${vs >= 0 ? '+' : ''}${vs.toFixed(2)} s`; })();
     if (clock.state === 'paused') { if (!v.paused) v.pause(); v.playbackRate = 1; $('st').textContent = clock.why === 'buffering' ? 'host buffering' : clock.why === 'offline' ? 'host offline' : 'paused with host'; if (coverTimer && Date.now() - lastPreSeek < 300) return;   // during a drag: at most ~3 seeks a second, always the latest, so the player is not thrashed
       if (exp >= v.duration - 1.5 && v.currentTime >= v.duration - 1.5) return;   // host parked at the end of the film: the last frame cannot be reached exactly, do not re-seek every heartbeat
@@ -551,7 +559,8 @@ async function runParty(me_, isHost) {
   }, 5000));
   // playback health (2026-10-14, to tell decoder drops from buffering from resyncs): dropped/decoded frames, buffer ahead, seeks
   let resyncs = 0, lastHealth = '';
-  timers.push(setInterval(() => { if (isHost || !player) return; const q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : { droppedVideoFrames: v.webkitDroppedFrameCount || 0, totalVideoFrames: v.webkitDecodedFrameCount || 0 }; let ahead = 0; try { const b = v.buffered; if (b.length) ahead = Math.max(0, b.end(b.length - 1) - v.currentTime); } catch {} const seg = segStats.times.length ? `, segments ${segStats.times.length} in last 10 s: avg ${(segStats.times.reduce((a, b) => a + b, 0) / segStats.times.length / 1000).toFixed(1)} s, max ${(Math.max(...segStats.times) / 1000).toFixed(1)} s, ${(segStats.bytes / 1e6).toFixed(1)} MB` : ', no segments in last 10 s'; const toEnd = isNaN(v.duration) ? '' : (v.duration - v.currentTime - ahead < 1 ? ' (to the end)' : ''); const txt = `${q.droppedVideoFrames} dropped / ${q.totalVideoFrames}, buffer ${ahead.toFixed(1)} s${toEnd}, resyncs ${resyncs}${seg}`; if (Date.now() % 10000 < 1000) { segStats.times = []; segStats.bytes = 0; } $('frames').textContent = txt; if (Date.now() % 10000 < 1000 && txt !== lastHealth) { lastHealth = txt; log(`health: ${txt}, ${v.videoHeight}p, rate ${v.playbackRate}`); } }, 1000));
+  if (isHost) timers.push(setInterval(() => { const l = displayLag(); if (l !== null && !v.paused) log(`host health: screen trails player by ${(l * 1000).toFixed(0)} ms, ${v.videoHeight}p, rate ${v.playbackRate}`); }, 10000));
+  timers.push(setInterval(() => { if (isHost || !player) return; const q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : { droppedVideoFrames: v.webkitDroppedFrameCount || 0, totalVideoFrames: v.webkitDecodedFrameCount || 0 }; let ahead = 0; try { const b = v.buffered; if (b.length) ahead = Math.max(0, b.end(b.length - 1) - v.currentTime); } catch {} const seg = segStats.times.length ? `, segments ${segStats.times.length} in last 10 s: avg ${(segStats.times.reduce((a, b) => a + b, 0) / segStats.times.length / 1000).toFixed(1)} s, max ${(Math.max(...segStats.times) / 1000).toFixed(1)} s, ${(segStats.bytes / 1e6).toFixed(1)} MB` : ', no segments in last 10 s'; const toEnd = isNaN(v.duration) ? '' : (v.duration - v.currentTime - ahead < 1 ? ' (to the end)' : ''); const lagV = displayLag(); const txt = `${q.droppedVideoFrames} dropped / ${q.totalVideoFrames}, buffer ${ahead.toFixed(1)} s${toEnd}, resyncs ${resyncs}${seg}${lagV !== null ? `, screen trails player by ${(lagV * 1000).toFixed(0)} ms` : ''}`; if (Date.now() % 10000 < 1000) { segStats.times = []; segStats.bytes = 0; } $('frames').textContent = txt; if (Date.now() % 10000 < 1000 && txt !== lastHealth) { lastHealth = txt; log(`health: ${txt}, ${v.videoHeight}p, rate ${v.playbackRate}`); } }, 1000));
   let wsFailures = 0;
   if (!isHost) v.addEventListener('seeked', () => { if (v.paused) log(`seeked: now at ${v.currentTime.toFixed(1)} s, paused, readyState ${v.readyState}`); });
   window.__closeWs = () => ws?.close();   // for scripts/tests
