@@ -134,6 +134,12 @@ curl -X PUT "https://ztor-video.eric-tam.workers.dev/admin/films/<FILM_ID>/subti
 
 The answer reports the number of cues. Uploading the same language again replaces it; `DELETE` on the same URL removes it. The pass and the party join then list the tracks under `subtitles`, and the player shows them.
 
+## 6b. Audio languages
+
+A film can carry several audio languages. Deliver them inside the one master file: one stereo track per language, each tagged with its language (`eng`, `yue`, `cmn`, `jpn`, ...), the default language first. The encoder makes one AAC track per language and the player lists them in an "audio" selector, shown only when a film has more than one. On the Watch page each viewer picks their own language, remembered on that device. In a watch party the **host** picks and every viewer follows; viewers have no selector. Switching takes about half a second and never reloads the player.
+
+A master with two or more audio tracks where one has no language tag is refused by the encoder, with the reason in the job log. Dubs cannot be added later as separate files; re-deliver the master with the extra track and encode again. Films encoded before 2026-10-16 keep their single track.
+
 ## 7. Remove a film
 
 Operator call, with the runner token: `DELETE https://ztor-video.eric-tam.workers.dev/admin/films/<FILM_ID>` removes the master, every rendition and the keys.

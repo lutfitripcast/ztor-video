@@ -22,6 +22,28 @@ export async function listSubtitles(env: Env, origin: string, filmId: string, ve
   return l.objects.filter((o) => o.key.endsWith(".vtt")).map((o) => { const lang = o.key.slice(prefix.length, -4).toLowerCase(); return { lang, label: SUB_LABELS[lang] ?? lang, url: `${origin}/media/${filmId}/v${version}/subs/${lang}.vtt` }; });
 }
 
+/** Audio languages of a film (2026-10-16): one AAC track per language, packaged as one HLS audio playlist each. Read from the
+ *  packaged master playlist (EXT-X-MEDIA TYPE=AUDIO lines), so nothing is stored: the protected-URL master if it exists, else the
+ *  DRM one; both carry the same tracks. Films encoded before 2026-10-16 have one track with no language ("und" = Original). */
+const AUDIO_LABELS: Record<string, string> = { "und": "Original", "en": "English", "eng": "English", "zh": "中文", "zho": "中文", "chi": "中文", "yue": "粵語", "cmn": "普通話", "zh-hk": "粵語", "zh-cn": "普通話", "zh-tw": "國語",
+  "ja": "日本語", "jpn": "日本語", "ko": "한국어", "kor": "한국어", "th": "ไทย", "tha": "ไทย", "ms": "Bahasa Melayu", "msa": "Bahasa Melayu", "may": "Bahasa Melayu", "id": "Bahasa Indonesia", "ind": "Bahasa Indonesia",
+  "fr": "Français", "fra": "Français", "fre": "Français", "de": "Deutsch", "deu": "Deutsch", "ger": "Deutsch", "es": "Español", "spa": "Español", "ta": "தமிழ்", "tam": "தமிழ்", "hi": "हिन्दी", "hin": "हिन्दी" };
+export interface AudioTrack { lang: string; label: string; default: boolean }
+export async function listAudio(env: Env, filmId: string, version: number): Promise<AudioTrack[]> {
+  const prefix = `films/${filmId}/v${version}`;
+  const obj = (await env.STREAMS.get(`${prefix}/url/master.m3u8`)) ?? (await env.STREAMS.get(`${prefix}/master.m3u8`));
+  if (!obj) return [];
+  const out: AudioTrack[] = [];
+  for (const line of (await obj.text()).split("\n")) {
+    if (!line.startsWith("#EXT-X-MEDIA:") || !/TYPE=AUDIO/.test(line)) continue;
+    const lang = (/LANGUAGE="([^"]+)"/.exec(line)?.[1] ?? "und").toLowerCase();
+    if (out.some((a) => a.lang === lang)) continue;
+    out.push({ lang, label: AUDIO_LABELS[lang] ?? lang, default: /DEFAULT=YES/.test(line) });
+  }
+  if (out.length && !out.some((a) => a.default)) out[0].default = true;
+  return out;
+}
+
 /** An unexpired row in `rentals` for this viewer and film. */
 export async function hasRental(env: Env, userId: string, filmId: string) {
   const r = await env.DB.prepare("SELECT 1 FROM rentals WHERE user_id=? AND film_id=? AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')").bind(userId, filmId).first();

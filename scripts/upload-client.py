@@ -39,4 +39,5 @@ with cf.ThreadPoolExecutor(4) as ex:
 done = call("POST", f"{base}/uploads/{init['filmId']}/complete", {"parts": parts})
 dt = time.time() - t0
 print(f"complete: {json.dumps(done)}")
-print(f"{size/1e9:.3f} GB in {dt:.0f}s ({size*8/dt/1e6:.1f} Mbps); status now: {call('GET', f'{base}/films/{init['filmId']}')['status']}")
+status = call("GET", f"{base}/films/{init['filmId']}")["status"]   # one quote type per f-string: Python 3.11 (the encoder image, many team PCs) needs that
+print(f"{size/1e9:.3f} GB in {dt:.0f}s ({size*8/dt/1e6:.1f} Mbps); status now: {status}")

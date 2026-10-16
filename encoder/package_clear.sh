@@ -10,10 +10,16 @@ for f in "$REN"/video_*p.mp4; do
   n=$(basename "$f" .mp4)
   ARGS+=("in=$f,stream=video,init_segment=$OUT/$n/init.mp4,segment_template=$OUT/$n/\$Number\$.m4s")
 done
-if [ -f "$REN/audio_128k.mp4" ]; then
-  ARGS+=("in=$REN/audio_128k.mp4,stream=audio,init_segment=$OUT/audio/init.mp4,segment_template=$OUT/audio/\$Number\$.m4s")
-fi
-packager "${ARGS[@]}" \
+# Audio (2026-10-16): one playlist per language in a single HLS audio group. audio_128k.mp4 is the pre-2026-10-16 single
+# unnamed track and keeps its old audio/ folder; tagged tracks go to audio_<lang>/. The first file in name order is the default.
+for f in "$REN"/audio_*.mp4; do
+  [ -f "$f" ] || continue
+  n=$(basename "$f" .mp4); lang=${n#audio_}; [ "$lang" = "128k" ] && lang=und
+  dir=audio_$lang; [ "$lang" = "und" ] && dir=audio
+  ARGS+=("in=$f,stream=audio,language=$lang,hls_name=$lang,hls_group_id=audio,init_segment=$OUT/$dir/init.mp4,segment_template=$OUT/$dir/\$Number\$.m4s")
+done
+DEFLANG=(); [ -s "$REN/audio_default" ] && DEFLANG=(--default_language "$(cat "$REN/audio_default")")
+packager "${ARGS[@]}" "${DEFLANG[@]}" \
   --segment_duration 6 --fragment_duration 6 --generate_static_live_mpd \
   --hls_master_playlist_output "$OUT/master.m3u8" \
   --quiet

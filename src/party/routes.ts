@@ -18,7 +18,7 @@ import { signJwt, verifyJwt, bearer, type PlayClaims } from "../lib/jwt";
 import { sfuConfigured, newSession, tracksNew, tracksUpdate, renegotiate, closeTracks, iceServers, type SessionDescription } from "../lib/sfu";
 import type { HostTracks } from "./room";
 import { actingUser } from "../lib/auth";
-import { listSubtitles } from "../lib/util";
+import { listSubtitles, listAudio } from "../lib/util";
 
 const TRACK_NAME = /^[a-z][a-z0-9-]{0,23}$/;
 const SESSION_ID = /^[a-f0-9]{16,128}$/;
@@ -104,9 +104,10 @@ export async function handleParty(req: Request, env: Env, url: URL, seg: string[
     await env.DB.prepare("INSERT INTO party_members (party_id,user_id,role) VALUES (?,?,?) ON CONFLICT(party_id,user_id) DO UPDATE SET joins=joins+1, last_joined_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'), role=excluded.role").bind(partyId, b.userId, role).run();
     const base = `${url.origin}/media/${party.film_id}/v${party.film_version}/url`;
     const subtitles = await listSubtitles(env, url.origin, party.film_id, party.film_version);
+    const audio = await listAudio(env, party.film_id, party.film_version);
     const wsOrigin = url.origin.replace(/^http/, "ws");
     return json({ token, expiresInS: ttl, role, partyId, title: party.title, filmId: party.film_id, filmTitle: party.film_title, hostId: party.host_id, you: { id: who.id, name: who.name },
-      ws: `${wsOrigin}/party/${partyId}/ws?t=${token}`, subtitles, hls: `${base}/master.m3u8?t=${token}`,
+      ws: `${wsOrigin}/party/${partyId}/ws?t=${token}`, subtitles, audio, hls: `${base}/master.m3u8?t=${token}`,
       realtime: sfuConfigured(env), viewers: s.viewers ?? 0, hostLive: !!s.hostTracks,
       policy: { maxHeight: 1080, reason: "protected-URL version: no DRM, so no HDCP; capped at 1080p", sync: role === "host" ? "you drive the clock" : "your player follows the host's clock" } });
   }

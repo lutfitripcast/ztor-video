@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Proposal step 5, part 1: H.264 ladder, 2-second GOP aligned across renditions, AAC 128k.
+# Proposal step 5, part 1: H.264 ladder, 2-second GOP aligned across renditions, AAC 128k stereo per audio language (2026-10-16).
 # Usage: encode.sh <source (path or presigned URL)> <outdir> [maxHeight]
 # One ffmpeg run: the master is decoded once. Rungs above the source height are skipped (no upscaling).
 set -euo pipefail
@@ -7,7 +7,19 @@ SRC="$1"; OUT="$2"; MAXH="${3:-2160}"
 mkdir -p "$OUT"
 FPS=$(ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "$SRC" | head -1)
 GOP=$(python3 -c "from fractions import Fraction; print(round(float(Fraction('$FPS'))*2))" 2>/dev/null || echo 48)
-HAS_AUDIO=$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_type -of csv=p=0 "$SRC" | head -1)
+# Audio languages (2026-10-16): every audio stream of the master becomes its own stereo AAC file, audio_<lang>.mp4, named by
+# the stream's language tag. One untagged stream is accepted as "und" (shown as "Original"); with several streams every
+# one must be tagged, or the languages cannot be told apart and the job stops here with a clear message.
+AUDIO_LANGS=()
+while IFS=, read -r IDX LANG; do
+  [ -z "$IDX" ] && continue
+  LANG=$(echo "${LANG:-und}" | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9-'); [ -z "$LANG" ] && LANG=und
+  AUDIO_LANGS+=("$LANG")
+done < <(ffprobe -v error -select_streams a -show_entries stream=index:stream_tags=language -of csv=p=0 "$SRC")
+if [ "${#AUDIO_LANGS[@]}" -gt 1 ]; then
+  for L in "${AUDIO_LANGS[@]}"; do [ "$L" = "und" ] && { echo "audio: ${#AUDIO_LANGS[@]} audio tracks but one has no language tag; tag every track (eng, yue, cmn, ...) and deliver again" >&2; exit 1; }; done
+  DUP=$(printf '%s\n' "${AUDIO_LANGS[@]}" | sort | uniq -d | head -1); [ -n "$DUP" ] && { echo "audio: two tracks are tagged '$DUP'; every track needs a different language" >&2; exit 1; }
+fi
 
 # height bitrate_k maxrate_k bufsize_k
 LADDER="2160 16000 17600 32000
@@ -36,7 +48,9 @@ while read -r H BR MAXR BUF; do
   [ "$H" -gt "$MAXH" ] && continue
   ARGS+=(-map "[v$H]" $X264 -b:v ${BR}k -maxrate ${MAXR}k -bufsize ${BUF}k -an -f mp4 -movflags +faststart "$OUT/video_${H}p.mp4")
 done <<< "$LADDER"
-if [ -n "$HAS_AUDIO" ]; then ARGS+=(-map 0:a:0 -vn -c:a aac -b:a 128k -ac 2 -f mp4 "$OUT/audio_128k.mp4"); fi
+AI=0; for L in "${AUDIO_LANGS[@]}"; do ARGS+=(-map 0:a:$AI -vn -c:a aac -b:a 128k -ac 2 -metadata:s:a:0 language=$L -f mp4 "$OUT/audio_${L}.mp4"); AI=$((AI+1)); done
+echo "audio tracks: ${AUDIO_LANGS[*]:-none}"
+[ "${#AUDIO_LANGS[@]}" -gt 0 ] && echo "${AUDIO_LANGS[0]}" > "$OUT/audio_default"   # the master's first track is the default language
 
 ffmpeg "${ARGS[@]}"
 echo "rungs=${LABELS[*]} gop=$GOP audio=${HAS_AUDIO:-none}"

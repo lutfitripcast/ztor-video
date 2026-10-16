@@ -1,5 +1,6 @@
 FILM DELIVERY SPEC - ztor-video test platform
 =============================================
+Version 3, 2026-10-16 (adds audio languages: several tagged stereo tracks in one master)
 Version 2, 2026-10-14 (adds integrity, handover sheet, self-check, transfer, versions, rejections)
 
 Please deliver ONE master file per film. Our encoder builds every streaming
@@ -24,9 +25,14 @@ Colour         Rec.709 SDR. Our output is 8-bit SDR, so an HDR master
 
 Bitrate        1080p: 20 to 40 Mbps.   2160p: 50 to 80 Mbps.
 
-Audio          One stereo mix as the FIRST audio track, 48 kHz, AAC or PCM.
-               Only the first audio track is used; 5.1 is downmixed to
-               stereo. One language only for now.
+Audio          One stereo mix per language, each as its own audio track in
+               the same master file, 48 kHz, AAC or PCM. Every track must
+               carry a language tag (eng, yue, cmn, jpn, kor, tha, msa, ind;
+               the 3-letter ISO 639-2 code your export tool offers). The
+               FIRST audio track is the default the player starts with.
+               5.1 is downmixed to stereo. A single track may be untagged;
+               with two or more, an untagged track stops the encode and the
+               job reports which one. Do not deliver dubs as separate files.
 
 Subtitles      One WebVTT file per language (UTF-8, starting with WEBVTT),
                named with the language tag: en-us.vtt, zh-hk.vtt, zh-cn.vtt.
@@ -94,7 +100,8 @@ Rejections     We will send a file back, with the reason, if it is:
 
 Checklist before sending
   [ ] plays in VLC from start to end
-  [ ] one video track; one stereo audio track, and it is the first track
+  [ ] one video track; one stereo audio track per language, every track
+      tagged with its language, the default language first
   [ ] constant frame rate
   [ ] SDR, Rec.709 (color_transfer bt709)
   [ ] ASCII file name
