@@ -104,7 +104,7 @@
 // ---- shared helpers -------------------------------------------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const BUILD = '20261016-063136';   // stamped at deploy by scripts/stamp-build.mjs
+const BUILD = '20261019-072618';   // stamped at deploy by scripts/stamp-build.mjs
 let staleReloadAt = 0;
 async function checkBuild(where) {
   try {
@@ -260,16 +260,18 @@ routes.home = async () => {
   const timer = setInterval(() => { if (location.hash.startsWith('#/home')) load(); }, 10000); cleanup = () => clearInterval(timer);
   const bh = $('bHost'); if (bh) bh.onclick = async () => {
     if (!films.length) await load();
-    const ok = films.filter(f => f.protections.includes('url'));
+    const ok = films;   // the app's film list is ready films only; every one has a DRM version, most also the protected-URL one
     $('modalBody').innerHTML = `<h2 style="margin-top:0">Host a party</h2>
-      <label>Film (needs a protected-URL version)</label><select id="hFilm">${ok.map(f => `<option value="${f.id}" ${f.rented ? '' : 'data-norent="1"'}>${esc(f.title)}${f.rented ? '' : ' (rent first)'}</option>`).join('') || '<option value="">no film has a protected-URL version</option>'}</select>
+      <label>Film</label><select id="hFilm">${ok.map(f => `<option value="${f.id}" ${f.rented ? '' : 'data-norent="1"'}>${esc(f.title)}${f.rented ? '' : ' (rent first)'}</option>`).join('') || '<option value="">no film has a protected-URL version</option>'}</select>
       <label>Party title</label><input id="hTitle" placeholder="Friday premiere">
+      <label>Protection</label><select id="hProt"><option value="url">Protected URL (no DRM, no licenses, any screen)</option><option value="drm">DRM (vendor licenses, HDCP required, FairPlay on Safari)</option></select>
+      <p class="hint" style="margin:4px 0 10px">Protected URL is the usual choice. DRM keeps the segments encrypted but costs 3 licenses per viewer and refuses screens without HDCP.</p>
       <div class="ctl"><button id="hGo" class="primary" style="flex:1">Create</button><button id="hNo">Cancel</button></div><p id="hErr" class="no" style="min-height:1.4em;margin:8px 0 0"></p>`;
     $('modal').style.display = 'flex'; $('hNo').onclick = () => $('modal').style.display = 'none';
     $('hGo').onclick = async () => {
       const filmId = $('hFilm').value; if (!filmId) return;
       if ($('hFilm').selectedOptions[0].dataset.norent) { const r = await api('POST', `/api/rent/${filmId}`); if (r.status !== 200) return $('hErr').textContent = r.body.error; }
-      const r = await api('POST', '/party', { filmId, title: $('hTitle').value.trim() || undefined });
+      const r = await api('POST', '/party', { filmId, title: $('hTitle').value.trim() || undefined, protection: $('hProt').value });
       if (r.status !== 200) return $('hErr').textContent = r.body.error || `error ${r.status}`;
       $('modal').style.display = 'none'; location.hash = `#/party/${r.body.partyId}`;
     };
@@ -301,7 +303,7 @@ routes.watch = async ([filmId]) => {
     </div>
     <div class="card"><h2 style="margin-top:0">About this film</h2>
       <div class="row" style="flex-direction:column;align-items:flex-start;gap:6px"><span>rental <b>${f.rented ? 'until ' + fmt(f.rentalExpires) : 'none'}</b></span><span>version <b>v${f.version}</b></span><span>protection <b>${f.protections.map(p => p === 'drm' ? 'DRM (Widevine, PlayReady, FairPlay)' : 'protected URL (signed 4 h links)').join(' and ')}</b></span></div>
-      <p class="hint">DRM plays up to 4K on any device that can decode it. The protected-URL version has no DRM, so it is capped at 1080p; it is the version watch parties use.</p>
+      <p class="hint">DRM plays up to 4K on any device that can decode it. The protected-URL version has no DRM, so it is capped at 1080p; watch parties use it unless the host picks DRM when creating the party.</p>
     </div></div>`;
   bindLog($('log'));
   let player = null, pass = null, lic = 0, timer = null;
@@ -416,7 +418,7 @@ routes.party = async ([partyId]) => {
       <div class="card">
         <div class="screen"><video id="v" playsinline ${isHost ? 'controls' : 'disablepictureinpicture controlslist="nodownload noplaybackrate"'}></video><div class="caps" id="caps"></div><video id="cam" autoplay playsinline muted></video><span id="micPill"><i></i> host mic on</span><audio id="hostAudio" autoplay></audio><canvas id="hold"></canvas><div id="over">Watch party ended</div><div id="gate"><button id="bGate" class="primary">Tap to watch with sound</button></div></div>
         ${isHost ? `<div class="ctl"><button id="bCam">Camera</button><button id="bMic">Mic only</button><span style="flex:1"></span><button id="bEnd" class="danger">End party</button></div>` : ''}
-        <div class="row" style="margin-top:10px"><span>player <b id="st">idle</b></span><span>quality <b id="res">-</b></span><span>clock <b id="clk">-</b></span><span>host feed <b id="rtc">-</b></span>${isHost ? '<span>subtitles <select id="subs" style="width:auto;padding:3px 8px"><option value="off">off</option></select></span>' : '<select id="subs" hidden></select>'}${isHost ? '<span data-audio hidden>audio <select id="aud" style="width:auto;padding:3px 8px"></select></span>' : '<select id="aud" hidden></select>'}<span>host bitrate <b id="kbps">-</b></span><span>frames <b id="frames">-</b></span></div>
+        <div class="row" style="margin-top:10px"><span>player <b id="st">idle</b></span><span>quality <b id="res">-</b></span><span>clock <b id="clk">-</b></span><span>host feed <b id="rtc">-</b></span><span>subtitles <select id="subs" style="width:auto;padding:3px 8px"><option value="off">off</option></select></span>${isHost ? '<span data-audio hidden>audio <select id="aud" style="width:auto;padding:3px 8px"></select></span>' : '<select id="aud" hidden></select>'}<span>host bitrate <b id="kbps">-</b></span><span>frames <b id="frames">-</b></span></div>
         <details class="log"><summary>Details and log</summary>
           ${isHost ? `<div class="checks"><div><span>Join without a ticket should be refused</span><span id="c1">-</span></div><div><span>Viewer cannot move the clock</span><span id="c2">-</span></div><div><span>Viewer cannot publish camera / mic</span><span id="c3">-</span></div><div><span>Party ticket does not open another film</span><span id="c4">-</span></div><div><span>Chat rate limit holds</span><span id="c5">-</span></div><div><span>Kicked viewer cannot rejoin</span><span id="c6">-</span></div></div><div class="ctl"><button id="bChecks" class="sm">Run security checks</button></div><p class="hint">Checks need TEST_MODE on the server (a throwaway viewer rents, joins and misbehaves).</p>` : ''}
           <pre id="log"></pre></details>
@@ -435,16 +437,25 @@ async function runParty(me_, isHost) {
   checkBuild('party');
   const P = (path) => `/party/${me_.partyId}${path}`;
   const auth = () => ({ Authorization: 'Bearer ' + me_.token });
-  let subsApply = null, roomSubtitle = 'off', hostSubtitle = null;
-  let audApply = null, roomAudio = '', hostAudio = null;   // the party's audio language, same rule as subtitles: host picks, viewers follow (2026-10-16)   // the party's subtitle language (host-chosen); applied once the tracks are attached; the host resends its choice on every (re)connect
+  let audApply = null, roomAudio = '', hostAudio = null;   // the party's audio language: host picks, viewers follow (2026-10-16). Subtitles are each person's own choice (2026-10-19).
   let ws = null, player = null, clock = null, offset = 0, userStarted = isHost, hostTracks = null, wsRetry = 0, closed = false;
   const timers = [];
-  log(`joined "${me_.title}" as ${me_.role} (${me_.you.name}). Realtime SFU ${me_.realtime ? 'on' : 'OFF'}. ${me_.policy.sync}.`);
+  const drmParty = me_.mode === 'drm';
+  log(`joined "${me_.title}" as ${me_.role} (${me_.you.name}). ${drmParty ? 'DRM version' : 'Protected-URL version'}. Realtime SFU ${me_.realtime ? 'on' : 'OFF'}. ${me_.policy.sync}.`);
 
   // film
   shaka.polyfill.installAll();
   player = new shaka.Player(); await player.attach($('v'));
   if (isHost) player.configure({ preferredAudioLanguage: rememberedAudio() });
+  if (drmParty) {   // 2026-10-19: DRM party. Same setup as the Watch page: vendor license servers, FairPlay certificate, the party pass as bearer on license calls.
+    const vd = me_.vendorDrm;
+    const drmCfg = vd ? { servers: { 'com.widevine.alpha': vd.widevine, 'com.microsoft.playready': vd.playready, 'com.apple.fps': vd.fairplay }, advanced: { 'com.apple.fps': { serverCertificateUri: vd.fairplayCertificate } } } : { servers: { 'org.w3.clearkey': me_.licenseUrl } };
+    player.configure({ drm: { ...drmCfg, preferredKeySystems: isSafari ? ['com.apple.fps'] : ['com.widevine.alpha', 'com.microsoft.playready'] }, streaming: { useNativeHlsForFairPlay: false } });
+    const T = shaka.net.NetworkingEngine.RequestType; let lic = 0;
+    player.getNetworkingEngine().registerRequestFilter((type, req) => { if (type === T.MANIFEST || type === T.LICENSE) req.headers['Authorization'] = 'Bearer ' + me_.token; if (type === T.LICENSE) lic++; });
+    player.getNetworkingEngine().registerResponseFilter((type, resp) => { if (type === T.LICENSE) log(`license ${lic}: ${resp.data.byteLength} bytes (${vd ? (isSafari ? 'FairPlay' : 'Widevine/PlayReady') + ' via ' + vd.vendor : 'ClearKey'})`); });
+    window.__licenses = () => lic;   // for scripts/tests
+  }
   const caps = captionRenderer($('v'), $('caps')); player.configure({ textDisplayFactory: caps.factory });   // captions as page elements, same in every browser
   // Quality selection tuned for a connection that drops mid-film (2026-10-10): switch every 2 s instead of 8, step down at 80% of
   // measured bandwidth, keep 30 s buffered, prefetch the next segment. Shaka aborts a segment in flight when a lower rung would finish sooner.
@@ -469,7 +480,7 @@ async function runParty(me_, isHost) {
   const capLow = (why) => { if (isHost || !player || nativeHls) return; const t = player.getVariantTracks().find(t => t.active); capUntil = Date.now() + 30000; player.configure({ abr: { restrictions: { maxHeight: 480 } } }); log(`stall guard: ${why} at ${t ? t.height + 'p' : '?'}; capped at 480p for 30 s so the next segment is small`); $('res').textContent += ' (capped)'; setTimeout(() => { if (Date.now() >= capUntil && player) { capUntil = 0; player.configure({ abr: { restrictions: { maxHeight: Infinity } } }); log('stall guard: cap lifted, automatic quality again'); } }, 30000); };
   v.addEventListener('waiting', () => { if (isHost || v.paused) return; recentStallAt = Date.now(); clearTimeout(stallTimer); stallTimer = setTimeout(() => { if (!v.paused && v.readyState < 3 && clock?.state === 'playing' && !capUntil) capLow('picture stopped for 1 s'); }, 1000); });
   v.addEventListener('playing', () => { clearTimeout(stallTimer); $('st').textContent = 'playing'; }); v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; }); v.addEventListener('waiting', () => $('st').textContent = 'buffering');
-  try { $('st').textContent = 'loading'; await player.load(me_.hls); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, protected-URL over HLS, no license requests`); attachSubtitles(caps.live, me_.subtitles, $('subs'), log, isHost ? { remember: true, onChange: (l) => { hostSubtitle = l; wsSend({ t: 'subtitle', lang: l }); } } : { locked: true }).then(apply => { subsApply = apply; if (isHost) { hostSubtitle = apply(roomSubtitle !== 'off' ? roomSubtitle : rememberedSubtitle()); wsSend({ t: 'subtitle', lang: hostSubtitle }); } else apply(roomSubtitle); }); audApply = attachAudio(player, me_.audio, $('aud'), log, isHost ? { remember: true, onChange: (l) => { hostAudio = l; wsSend({ t: 'audio', lang: l }); } } : { locked: true }); if (isHost) { hostAudio = audApply(roomAudio || rememberedAudio()); if (hostAudio) wsSend({ t: 'audio', lang: hostAudio }); } else if (roomAudio) audApply(roomAudio); } catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
+  try { $('st').textContent = 'loading'; await player.load(me_.hls); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, ${drmParty ? 'DRM over HLS' : 'protected-URL over HLS, no license requests'}`); attachSubtitles(caps.live, me_.subtitles, $('subs'), log, { remember: true }).then(apply => apply(rememberedSubtitle())); audApply = attachAudio(player, me_.audio, $('aud'), log, isHost ? { remember: true, onChange: (l) => { hostAudio = l; wsSend({ t: 'audio', lang: l }); } } : { locked: true }); if (isHost) { hostAudio = audApply(roomAudio || rememberedAudio()); if (hostAudio) wsSend({ t: 'audio', lang: hostAudio }); } else if (roomAudio) audApply(roomAudio); } catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
   if (!isHost) $('gate').style.display = 'flex';
   $('bGate').onclick = () => { userStarted = true; $('gate').style.display = 'none'; v.muted = false; if (clock?.state === 'playing' && !linkDown) v.play().catch(() => {}); else { v.pause(); $('st').textContent = clock ? 'waiting for host' : 'connecting to room'; } $('cam').play().catch(() => {}); $('hostAudio').play().catch(() => {}); };
   // A viewer's film plays only on the host's clock. Anything else that starts it (native controls in fullscreen, picture in
@@ -616,12 +627,11 @@ async function runParty(me_, isHost) {
   timers.push(setInterval(() => { if (ws?.readyState === 1 && (Date.now() - connectedAt < 60000 || (Date.now() - connectedAt) % 30000 < 5000)) pingTime(); }, 5000));
   const onRoom = (m) => {
     switch (m.t) {
-      case 'hello': roomSubtitle = m.subtitle || 'off'; if (subsApply && !isHost) subsApply(roomSubtitle); if (isHost && hostSubtitle !== null) wsSend({ t: 'subtitle', lang: hostSubtitle }); roomAudio = m.audio || ''; if (audApply && !isHost && roomAudio) audApply(roomAudio); if (isHost && hostAudio) wsSend({ t: 'audio', lang: hostAudio }); takeClock(m.clock, m.serverTime); if (isHost && liveList().length) api('PUT', P('/rtc/tracks'), { tracks: liveList() }, auth()).then(r => log(`re-announced ${liveList().length} live track(s) after reconnect -> ${r.status}`)); setPinned(m.pinned); $('viewers').textContent = m.viewers; if ($('slow')) $('slow').value = m.slowModeS; (m.recent || []).forEach(addMsg); setLive(m.hostTracks, m.hostOnline); if (m.hostTracks) pullTracks(m.hostTracks); if (m.muted) $('chatHint').textContent = 'You are muted by the host.'; break;
+      case 'hello': roomAudio = m.audio || ''; if (audApply && !isHost && roomAudio) audApply(roomAudio); if (isHost && hostAudio) wsSend({ t: 'audio', lang: hostAudio }); takeClock(m.clock, m.serverTime); if (isHost && liveList().length) api('PUT', P('/rtc/tracks'), { tracks: liveList() }, auth()).then(r => log(`re-announced ${liveList().length} live track(s) after reconnect -> ${r.status}`)); setPinned(m.pinned); $('viewers').textContent = m.viewers; if ($('slow')) $('slow').value = m.slowModeS; (m.recent || []).forEach(addMsg); setLive(m.hostTracks, m.hostOnline); if (m.hostTracks) pullTracks(m.hostTracks); if (m.muted) $('chatHint').textContent = 'You are muted by the host.'; break;
       case 'time': { const now = Date.now(); const rtt = now - m.c; if (!bestPing || rtt <= bestPing.rtt || now - bestPing.at > 60000) { bestPing = { rtt, at: now }; offset = m.s - (m.c + rtt / 2); } if (!pingKnown) { pingKnown = true; if (isHost && clock) takeClock(clock, clock.at + (Date.now() - clock.local)); } break; }
       case 'chat': addMsg(m.msg); break;
       case 'system': addSys(m.text); break;
       case 'pin': setPinned(m.pinned); break;
-      case 'subtitle': roomSubtitle = m.lang || 'off'; if (subsApply) subsApply(roomSubtitle); break;
       case 'audio': roomAudio = m.lang || ''; if (audApply && roomAudio) audApply(roomAudio); break;
       case 'clock': takeClock(m.clock, m.s); break;
       case 'roster': $('viewers').textContent = m.viewers; setLive(hostTracks, m.hostOnline); break;

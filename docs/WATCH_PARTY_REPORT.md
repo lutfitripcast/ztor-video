@@ -344,3 +344,7 @@ Reported: a viewer in Safari on a Mac was laggy during plain playback; other Saf
 ### 6.12 Frame on glass (added 2026-10-15)
 
 Reported with the host on Safari and the viewer on Chrome: the viewer ahead of the host. The sync compared player clocks, and a browser's screen trails its player clock by a browser-dependent amount, largest on Safari. Change: both sides now use `requestVideoFrameCallback`, the media time of the frame actually painted. The host reports that as its position while playing; the viewer measures its own painted frame against the target; both fall back to `currentTime` when the call is missing or no frame was painted in the last 300 ms. The health line on the viewer and a new "host health" line on the host print "screen trails player by N ms". Chrome harness unchanged after the change: viewers 0.2 s behind in every playing case, never ahead during a forced host stall, reload, socket drop and end of party as before. The Safari host cannot be driven from this Mac; the user's test with the two display-lag figures decides it.
+
+### 6.13 DRM parties (2026-10-19)
+
+A party can play the DRM version when the host chooses it at creation. The sync code is unchanged: the clock, margins and guards do not depend on the version. What differs is the first play and every reload, which wait for the vendor licenses (three per viewer on HLS), and that a viewer whose screen lacks HDCP is refused by the DRM module rather than by us. Protected URL stays the default.

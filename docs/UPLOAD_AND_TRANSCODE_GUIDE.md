@@ -122,7 +122,7 @@ Chrome, Edge and Android play the HLS with Widevine or PlayReady; Safari and iPh
 
 ## 6a. Subtitles
 
-Subtitles are separate WebVTT files, one per language, added after the film is uploaded (before or after encoding, it does not matter). On the Watch page each viewer picks their own language in the player's "subtitles" selector, remembered on that device. In a watch party the **host** picks the language and every viewer follows it; viewers have no selector. The cues follow the playback position, including seeks and party sync.
+Subtitles are separate WebVTT files, one per language, added after the film is uploaded (before or after encoding, it does not matter). On the Watch page each viewer picks their own language in the player's "subtitles" selector, remembered on that device. In a watch party each person, host or viewer, picks their own subtitle language the same way (changed 2026-10-19; audio is still the host's choice). The cues follow the playback position, including seeks and party sync.
 
 File: UTF-8 WebVTT (`.vtt`, starting with `WEBVTT`); an SRT file is accepted and converted. Name it with the language tag: `en-us.vtt`, `zh-hk.vtt`, `zh-cn.vtt`, `ms.vtt`, `id.vtt`.
 

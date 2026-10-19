@@ -19,6 +19,7 @@ import { sfuConfigured, newSession, tracksNew, tracksUpdate, renegotiate, closeT
 import type { HostTracks } from "./room";
 import { actingUser } from "../lib/auth";
 import { listSubtitles, listAudio } from "../lib/util";
+import type { VendorEnv } from "../lib/drm-vendor";
 
 const TRACK_NAME = /^[a-z][a-z0-9-]{0,23}$/;
 const SESSION_ID = /^[a-f0-9]{16,128}$/;
@@ -43,7 +44,7 @@ const roomPost = (env: Env, partyId: string, path: string, body?: unknown) =>
 export async function handleParty(req: Request, env: Env, url: URL, seg: string[]): Promise<Response> {
   // ---- create ------------------------------------------------------------------------------------------------
   if (req.method === "POST" && seg.length === 1) {
-    const b = await req.json<{ hostId?: string; filmId?: string; title?: string }>().catch(() => ({} as any));
+    const b = await req.json<{ hostId?: string; filmId?: string; title?: string; protection?: string }>().catch(() => ({} as any));
     const who = await actingUser(req, env, b.hostId);
     if (!who) return err("sign in first", 401);
     if (who.session && who.role === "user") return err("only hosts can create a party. Ask an admin to make you a host.", 403);
@@ -52,13 +53,16 @@ export async function handleParty(req: Request, env: Env, url: URL, seg: string[
     const film = await env.DB.prepare("SELECT id,title,status,version,protections FROM films WHERE id=?").bind(b.filmId).first<any>();
     if (!film) return err("film not found", 404);
     if (film.status !== "ready") return err(`film not ready (status ${film.status})`, 409);
-    if (!String(film.protections ?? "drm").split(",").includes("url")) return err("watch party needs the film's protected-URL version (no DRM in a party)", 409);
+    // 2026-10-19: the host picks which version the party plays. 'url' (default) is the clear protected-URL version; 'drm' plays the
+    // encrypted version through the vendor licenses (3 licenses per viewer, HDCP required, FairPlay on Safari).
+    const protection = b.protection === "drm" ? "drm" : "url";
+    if (!String(film.protections ?? "drm").split(",").includes(protection)) return err(`this film has no ${protection === "drm" ? "DRM" : "protected-URL"} version`, 409);
     if (!(await hasRental(env, b.hostId, b.filmId))) return json({ error: "Rent this film to host a party for it." }, 402);
     const partyId = crypto.randomUUID().replace(/-/g, "").slice(0, 10);
     const title = (b.title ?? `${film.title} watch party`).slice(0, 120);
-    await env.DB.prepare("INSERT INTO parties (id,film_id,host_id,title) VALUES (?,?,?,?)").bind(partyId, b.filmId, b.hostId, title).run();
+    await env.DB.prepare("INSERT INTO parties (id,film_id,host_id,title,protection) VALUES (?,?,?,?,?)").bind(partyId, b.filmId, b.hostId, title, protection).run();
     await roomPost(env, partyId, "init", { partyId, filmId: b.filmId, hostId: b.hostId, title });
-    return json({ partyId, title, filmId: b.filmId, hostId: b.hostId, watchUrl: `${url.origin}/watch?party=${partyId}` });
+    return json({ partyId, title, filmId: b.filmId, hostId: b.hostId, protection, watchUrl: `${url.origin}/watch?party=${partyId}` });
   }
   const partyId = seg[1];
   if (!partyId) return err("party id required", 400);
@@ -87,7 +91,7 @@ export async function handleParty(req: Request, env: Env, url: URL, seg: string[
     return json({ ok: true, partyId, userId: who.id, price: "free (no payment step yet)", grants: "this party only, while it runs; not the film on its own" });
   }
 
-  // ---- join: the party pass is a protected-URL film pass (filmId + mode=url) with party + role claims ----------
+  // ---- join: the party pass is a film pass (filmId + mode=url or drm, per the party's protection) with party + role claims ----
   if (req.method === "POST" && seg[2] === "join" && seg.length === 3) {
     const b = await req.json<{ userId?: string; deviceId?: string }>().catch(() => ({} as any));
     const who = await actingUser(req, env, b.userId);
@@ -100,16 +104,19 @@ export async function handleParty(req: Request, env: Env, url: URL, seg: string[
     if ((s.banned as string[] | undefined)?.includes(b.userId)) return err("you were removed from this party", 403);
     const role = b.userId === party.host_id ? "host" : "viewer";
     const iat = Math.floor(Date.now() / 1000), ttl = Number(env.JWT_TTL_S);
-    const token = await signJwt({ sub: b.userId, filmId: party.film_id, deviceId: b.deviceId ?? "unknown", uhd: false, mode: "url", party: partyId, role, name: who.name.slice(0, 40), iat, exp: iat + ttl }, env.JWT_SECRET);
+    const mode: "drm" | "url" = party.protection === "drm" ? "drm" : "url";
+    const token = await signJwt({ sub: b.userId, filmId: party.film_id, deviceId: b.deviceId ?? "unknown", uhd: false, mode, party: partyId, role, name: who.name.slice(0, 40), iat, exp: iat + ttl }, env.JWT_SECRET);
     await env.DB.prepare("INSERT INTO party_members (party_id,user_id,role) VALUES (?,?,?) ON CONFLICT(party_id,user_id) DO UPDATE SET joins=joins+1, last_joined_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'), role=excluded.role").bind(partyId, b.userId, role).run();
-    const base = `${url.origin}/media/${party.film_id}/v${party.film_version}/url`;
+    const base = `${url.origin}/media/${party.film_id}/v${party.film_version}${mode === "url" ? "/url" : ""}`;
+    const venv = env as VendorEnv;
+    const vendorDrm = mode === "drm" && venv.DRM_VENDOR ? { vendor: venv.DRM_VENDOR, widevine: `${url.origin}/license/widevine`, playready: `${url.origin}/license/playready`, fairplay: `${url.origin}/license/fairplay`, fairplayCertificate: `${url.origin}/license/fairplay/cert` } : null;
     const subtitles = await listSubtitles(env, url.origin, party.film_id, party.film_version);
     const audio = await listAudio(env, party.film_id, party.film_version);
     const wsOrigin = url.origin.replace(/^http/, "ws");
     return json({ token, expiresInS: ttl, role, partyId, title: party.title, filmId: party.film_id, filmTitle: party.film_title, hostId: party.host_id, you: { id: who.id, name: who.name },
-      ws: `${wsOrigin}/party/${partyId}/ws?t=${token}`, subtitles, audio, hls: `${base}/master.m3u8?t=${token}`,
+      ws: `${wsOrigin}/party/${partyId}/ws?t=${token}`, subtitles, audio, hls: `${base}/master.m3u8?t=${token}`, mode, vendorDrm, licenseUrl: mode === "drm" ? `${url.origin}/license/clearkey` : null,
       realtime: sfuConfigured(env), viewers: s.viewers ?? 0, hostLive: !!s.hostTracks,
-      policy: { maxHeight: 1080, reason: "protected-URL version: no DRM, so no HDCP; capped at 1080p", sync: role === "host" ? "you drive the clock" : "your player follows the host's clock" } });
+      policy: { maxHeight: 1080, reason: mode === "drm" ? "DRM version: vendor licenses, HDCP required; parties stay at 1080p for sync" : "protected-URL version: no DRM, so no HDCP; capped at 1080p", sync: role === "host" ? "you drive the clock" : "your player follows the host's clock" } });
   }
 
   // ---- everything below needs a party ticket for THIS party ----------------------------------------------------

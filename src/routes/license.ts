@@ -36,10 +36,16 @@ export async function handleLicense(req: Request, env: Env, url: URL, seg: strin
     if (await licenseLimited(env, claims.sub)) return err("too many license requests", 429);
     const keys = JSON.parse((await env.KEYS.get(`keys:${claims.filmId}`)) ?? "null");
     if (!keys) return err("no keys for film", 404);
-    const rental = await env.DB.prepare("SELECT expires_at FROM rentals WHERE user_id=? AND film_id=? AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')").bind(claims.sub, claims.filmId).first<{ expires_at: string }>();
-    if (!rental) return json({ error: "Rent this film to watch it." }, 402);
+    // A party pass (2026-10-19) is issued against a ticket, not a rental: the licence then lasts as long as the pass itself.
+    let until: string;
+    if (claims.party) until = new Date(claims.exp * 1000).toISOString();
+    else {
+      const rental = await env.DB.prepare("SELECT expires_at FROM rentals WHERE user_id=? AND film_id=? AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')").bind(claims.sub, claims.filmId).first<{ expires_at: string }>();
+      if (!rental) return json({ error: "Rent this film to watch it." }, 402);
+      until = rental.expires_at;
+    }
     const ct = req.headers.get("content-type") ?? "";
-    const { response, keyIds } = await vendorLicense(req, env as VendorEnv, drm, claims, keys, rental.expires_at);
+    const { response, keyIds } = await vendorLicense(req, env as VendorEnv, drm, claims, keys, until);
     const detail = [response.headers.get("X-AxDRM-Message") ?? "", `req-ct=${ct}`, `resp-ct=${response.headers.get("content-type") ?? ""}`].filter(Boolean).join(" | ").slice(0, 500);
     await env.DB.prepare("INSERT INTO licenses (user_id,film_id,device_id,drm,key_ids,upstream_status,detail) VALUES (?,?,?,?,?,?,?)")
       .bind(claims.sub, claims.filmId, claims.deviceId, drm, keyIds.join(","), response.status, detail).run();
