@@ -58,7 +58,24 @@
   #hold{position:absolute;inset:0;width:100%;height:100%;display:none;background:#000;object-fit:contain;z-index:2}
   .caps{position:absolute;inset:0;pointer-events:none;z-index:2}   /* above the picture; the drag snapshot (#hold, later in the DOM) and the ended screen (#over, 3) still cover it */
   .caps .shaka-text-container{position:absolute!important;left:0;right:0;top:0;bottom:6%;display:flex!important;flex-direction:column;justify-content:flex-end;align-items:center;pointer-events:none}
-  .caps .shaka-text-container span{font-size:clamp(14px,2.6vw,26px);line-height:1.35;background:rgba(0,0,0,.65);color:#fff;padding:2px 8px;border-radius:4px;text-shadow:0 1px 2px #000}
+  .caps .shaka-text-container span{font-size:calc(clamp(14px,2.6vw,26px) * var(--cc-scale,1));line-height:1.35;background:rgba(0,0,0,.65);color:#fff;padding:2px 8px;border-radius:4px;text-shadow:0 1px 2px #000}
+  /* Settings menu (2026-10-19, parity with the Ztor watch party, Asana 1219566109935981): every person picks their own subtitles
+     (+ size), audio and quality. A gear on the picture opens it: a popover on desktop, a bottom sheet on phones, a side panel
+     in landscape. The hidden <select>s stay the source of truth; the menu only drives them. */
+  .setbtn{position:absolute;top:10px;right:10px;z-index:4;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:rgba(20,20,20,.8);color:var(--fg);display:grid;place-items:center;padding:0;cursor:pointer}
+  .setbtn svg{width:20px;height:20px}
+  .setpanel{position:absolute;top:56px;right:10px;z-index:5;width:280px;max-height:calc(100% - 66px);overflow:auto;background:#161616;border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.45);font-size:14px}
+  .setpanel[hidden]{display:none}
+  .setrow,.setopt{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:var(--fg);font:inherit;text-align:left;cursor:pointer}
+  .setrow:hover,.setopt:hover{background:rgba(255,255,255,.06)}
+  .setrow .val{margin-left:auto;color:var(--muted)}.setrow .chev{color:var(--muted)}
+  .setopt.on{color:var(--accent)}.setopt .dot{margin-left:auto;width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(255,255,255,.2)}
+  .setopt.on .dot{border-color:var(--accent);background:radial-gradient(circle,var(--accent) 0 3px,transparent 4px)}
+  .setback{display:flex;align-items:center;gap:6px;padding:10px 8px;border:0;background:transparent;color:var(--fg);font:inherit;font-weight:700;cursor:pointer}
+  .setsize{display:flex;gap:8px;padding:4px 12px 10px}.setsize button{flex:1;height:44px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--fg);padding:0}
+  .setsize button.on{border-color:var(--accent);color:var(--accent)}.setlabel{padding:8px 12px 4px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);margin-top:6px}
+  @media (max-width:768px){.setpanel{position:fixed;top:auto;left:0;right:0;bottom:0;width:auto;max-height:70vh;border-radius:16px 16px 0 0;font-size:16px;padding:8px 8px calc(12px + env(safe-area-inset-bottom))}.setpanel .setrow,.setpanel .setopt{min-height:52px}.setback{font-size:20px}}
+  @media (max-height:500px){.setpanel{position:fixed;top:0;bottom:0;right:0;left:auto;width:360px;max-height:none;border-radius:0;font-size:15px}.setback{font-size:18px}}
   #over{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000;color:#fff;font-size:22px;font-weight:700;letter-spacing:.3px;z-index:3}
   .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
   .ctl{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
@@ -161,6 +178,62 @@ function attachAudio(player, list, sel, logFn, opts = {}) {
   return apply;
 }
 const rememberedAudio = () => { try { return localStorage.getItem('ztor.audio') || ''; } catch { return ''; } };
+// Subtitle size (2026-10-19): S / M / L scale the caption line, as in the Ztor watch party (x0.85 / 1 / 1.3). Per device.
+const CC_SCALE = { sm: 0.85, md: 1, lg: 1.3 };
+const rememberedCcSize = () => { try { const v = localStorage.getItem('ztor.ccsize'); return CC_SCALE[v] ? v : 'md'; } catch { return 'md'; } };
+const applyCcSize = (caps, size) => { caps.style.setProperty('--cc-scale', String(CC_SCALE[size] || 1)); try { localStorage.setItem('ztor.ccsize', size); } catch {} };
+// The Settings menu (2026-10-19, parity with the Ztor watch party). It reads the options from the existing selectors and
+// sets them through their change handlers, so attachSubtitles / attachAudio / the quality switch keep doing the work.
+// A row is shown only when its selector has something to choose (audio needs two tracks, like the old selector).
+function settingsMenu(screen, { subs, aud, q, caps }) {
+  const btn = document.createElement('button'); btn.className = 'setbtn'; btn.type = 'button'; btn.setAttribute('aria-label', 'Settings'); btn.title = 'Settings';
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+  const panel = document.createElement('div'); panel.className = 'setpanel'; panel.hidden = true; panel.setAttribute('role', 'menu');
+  screen.appendChild(btn); screen.appendChild(panel);
+  applyCcSize(caps, rememberedCcSize());
+  // subtitles: off + a language; quality: auto + a rung; audio: shown by attachAudio only when the film has two tracks.
+  const usable = (sel) => !!sel && !sel.disabled && [...sel.options].filter(o => !o.disabled).length > 1 && !sel.closest('[data-audio]')?.hidden;
+  const label = (sel) => sel.selectedOptions[0]?.textContent || '-';
+  const rows = [['Subtitles', subs, 'subs'], ['Audio', aud, 'aud'], ['Quality', q, 'q']];
+  const pick = (sel, value) => { sel.value = value; sel.dispatchEvent(new Event('change')); };
+  const render = (page) => {
+    panel.innerHTML = '';
+    if (page === 'main') {
+      for (const [name, sel, key] of rows) {
+        if (!usable(sel)) continue;
+        const b = document.createElement('button'); b.className = 'setrow'; b.type = 'button'; b.dataset.setrow = key;
+        b.innerHTML = `<span>${name}</span><span class="val">${esc(label(sel))}</span><span class="chev">&rsaquo;</span>`;
+        b.onclick = () => render(key); panel.appendChild(b);
+      }
+      if (!panel.children.length) panel.innerHTML = '<div class="setlabel" style="border:0;margin:0">Nothing to choose for this film.</div>';
+      return;
+    }
+    const [name, sel] = rows.find(r => r[2] === page);
+    const back = document.createElement('button'); back.className = 'setback'; back.type = 'button'; back.innerHTML = `&lsaquo; ${name}`; back.onclick = () => render('main'); panel.appendChild(back);
+    for (const o of sel.options) {
+      if (o.disabled) continue;
+      const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitemradio'); b.className = 'setopt' + (o.value === sel.value ? ' on' : '');
+      b.innerHTML = `<span>${esc(o.textContent)}</span><span class="dot"></span>`;
+      // Picking a subtitle keeps the menu open so the size change below is visible; audio and quality close it.
+      b.onclick = () => { pick(sel, o.value); if (page === 'subs') render('subs'); else close(); };
+      panel.appendChild(b);
+    }
+    if (page === 'subs') {
+      const l = document.createElement('div'); l.className = 'setlabel'; l.textContent = 'Font size'; panel.appendChild(l);
+      const row = document.createElement('div'); row.className = 'setsize'; const cur = rememberedCcSize();
+      for (const [size, px, aria] of [['sm', 13, 'Small'], ['md', 17, 'Medium'], ['lg', 22, 'Large']]) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = size === cur ? 'on' : ''; b.style.fontSize = px + 'px'; b.textContent = 'Aa'; b.setAttribute('aria-label', aria); b.dataset.size = size;
+        b.onclick = () => { applyCcSize(caps, size); render('subs'); }; row.appendChild(b);
+      }
+      panel.appendChild(row);
+    }
+  };
+  const close = () => { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+  btn.onclick = (e) => { e.stopPropagation(); if (!panel.hidden) return close(); render('main'); panel.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
+  panel.addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', close);
+  return () => { document.removeEventListener('click', close); btn.remove(); panel.remove(); };
+}
 const api = async (method, path, body, headers = {}) => {
   const r = await fetch(path, { method, headers: { 'content-type': 'application/json', ...headers }, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
   let j = null; try { j = await r.clone().json(); } catch { j = await r.text(); }
@@ -296,7 +369,7 @@ routes.watch = async ([filmId]) => {
         <select id="mode" style="width:auto"><option value="drm">DRM version</option><option value="url" ${f.protections.includes('url') ? '' : 'disabled'}>Protected URL version${f.protections.includes('url') ? '' : ' (not built)'}</option></select>
 </div>
       <p id="policy" hidden></p>
-      <div class="row" style="margin-top:10px"><span>status <b id="st">idle</b></span><span>playing <b id="res">-</b></span><span>quality <select id="q" style="width:auto;padding:3px 8px"><option value="auto">auto</option></select></span><span>subtitles <select id="subs" style="width:auto;padding:3px 8px"><option value="off">off</option></select></span><span data-audio hidden>audio <select id="aud" style="width:auto;padding:3px 8px"></select></span><span>buffer <b id="buf">-</b></span><span>licenses <b id="lic">0</b></span></div>
+      <div class="row" style="margin-top:10px"><span>status <b id="st">idle</b></span><span>playing <b id="res">-</b></span><span hidden><select id="q"><option value="auto">auto</option></select><select id="subs"><option value="off">off</option></select><span data-audio hidden><select id="aud"></select></span></span><span>buffer <b id="buf">-</b></span><span>licenses <b id="lic">0</b></span></div>
       <details class="log"><summary>Details and log</summary><pre id="log"></pre></details>
     </div>
     <div class="card"><h2 style="margin-top:0">About this film</h2>
@@ -305,6 +378,7 @@ routes.watch = async ([filmId]) => {
     </div></div>`;
   bindLog($('log'));
   let player = null, pass = null, lic = 0, timer = null;
+  const disposeMenu = settingsMenu($('v').parentElement, { subs: $('subs'), aud: $('aud'), q: $('q'), caps: $('caps') });
   const mode = () => $('mode').value;
   async function requestPass() {
     const r = await api('POST', `/play/${filmId}`, { deviceId, mode: mode() });
@@ -381,7 +455,7 @@ routes.watch = async ([filmId]) => {
   }
   $('bPlay').onclick = play; $('bStop').onclick = async () => { if (player) { await player.destroy(); player = null; } $('st').textContent = 'stopped'; };
   $('mode').onchange = () => { pass = null; };
-  cleanup = async () => { clearInterval(timer); if (player) await player.destroy(); };
+  cleanup = async () => { clearInterval(timer); disposeMenu(); if (player) await player.destroy(); };
 };
 
 // ---- admin ------------------------------------------------------------------------------------------------------
@@ -416,7 +490,7 @@ routes.party = async ([partyId]) => {
       <div class="card">
         <div class="screen"><video id="v" playsinline ${isHost ? 'controls' : 'disablepictureinpicture controlslist="nodownload noplaybackrate"'}></video><div class="caps" id="caps"></div><video id="cam" autoplay playsinline muted></video><span id="micPill"><i></i> host mic on</span><audio id="hostAudio" autoplay></audio><canvas id="hold"></canvas><div id="over">Watch party ended</div><div id="gate"><button id="bGate" class="primary">Tap to watch with sound</button></div></div>
         ${isHost ? `<div class="ctl"><button id="bCam">Camera</button><button id="bMic">Mic only</button><span style="flex:1"></span><button id="bEnd" class="danger">End party</button></div>` : ''}
-        <div class="row" style="margin-top:10px"><span>player <b id="st">idle</b></span><span>quality <b id="res">-</b></span><span>clock <b id="clk">-</b></span><span>host feed <b id="rtc">-</b></span>${isHost ? '<span>subtitles <select id="subs" style="width:auto;padding:3px 8px"><option value="off">off</option></select></span>' : '<select id="subs" hidden></select>'}${isHost ? '<span data-audio hidden>audio <select id="aud" style="width:auto;padding:3px 8px"></select></span>' : '<select id="aud" hidden></select>'}<span>host bitrate <b id="kbps">-</b></span><span>frames <b id="frames">-</b></span></div>
+        <div class="row" style="margin-top:10px"><span>player <b id="st">idle</b></span><span>quality <b id="res">-</b></span><span>clock <b id="clk">-</b></span><span>host feed <b id="rtc">-</b></span><span hidden><select id="q"><option value="auto">auto</option></select><select id="subs"><option value="off">off</option></select><span data-audio hidden><select id="aud"></select></span></span><span>host bitrate <b id="kbps">-</b></span><span>frames <b id="frames">-</b></span></div>
         <details class="log"><summary>Details and log</summary>
           ${isHost ? `<div class="checks"><div><span>Join without a ticket should be refused</span><span id="c1">-</span></div><div><span>Viewer cannot move the clock</span><span id="c2">-</span></div><div><span>Viewer cannot publish camera / mic</span><span id="c3">-</span></div><div><span>Party ticket does not open another film</span><span id="c4">-</span></div><div><span>Chat rate limit holds</span><span id="c5">-</span></div><div><span>Kicked viewer cannot rejoin</span><span id="c6">-</span></div></div><div class="ctl"><button id="bChecks" class="sm">Run security checks</button></div><p class="hint">Checks need TEST_MODE on the server (a throwaway viewer rents, joins and misbehaves).</p>` : ''}
           <pre id="log"></pre></details>
@@ -435,8 +509,10 @@ async function runParty(me_, isHost) {
   checkBuild('party');
   const P = (path) => `/party/${me_.partyId}${path}`;
   const auth = () => ({ Authorization: 'Bearer ' + me_.token });
-  let subsApply = null, roomSubtitle = 'off', hostSubtitle = null;
-  let audApply = null, roomAudio = '', hostAudio = null;   // the party's audio language, same rule as subtitles: host picks, viewers follow (2026-10-16)   // the party's subtitle language (host-chosen); applied once the tracks are attached; the host resends its choice on every (re)connect
+  // Subtitles and audio are per person (2026-10-19, parity with the Ztor watch party: "every participant picks their own …
+  // choices affect only that person", CN, Asana 1219566109935981, 16-10). Until then the host picked one language for the room
+  // (15–16 Oct); the room no longer carries it, so nothing here sends or follows a room language.
+  let subsApply = null, audApply = null;
   let ws = null, player = null, clock = null, offset = 0, userStarted = isHost, hostTracks = null, wsRetry = 0, closed = false;
   const timers = [];
   log(`joined "${me_.title}" as ${me_.role} (${me_.you.name}). Realtime SFU ${me_.realtime ? 'on' : 'OFF'}. ${me_.policy.sync}.`);
@@ -444,7 +520,7 @@ async function runParty(me_, isHost) {
   // film
   shaka.polyfill.installAll();
   player = new shaka.Player(); await player.attach($('v'));
-  if (isHost) player.configure({ preferredAudioLanguage: rememberedAudio() });
+  player.configure({ preferredAudioLanguage: rememberedAudio() });   // each person's remembered audio language, picked at load
   const caps = captionRenderer($('v'), $('caps')); player.configure({ textDisplayFactory: caps.factory });   // captions as page elements, same in every browser
   // Quality selection tuned for a connection that drops mid-film (2026-10-10): switch every 2 s instead of 8, step down at 80% of
   // measured bandwidth, keep 30 s buffered, prefetch the next segment. Shaka aborts a segment in flight when a lower rung would finish sooner.
@@ -465,11 +541,16 @@ async function runParty(me_, isHost) {
   player.getNetworkingEngine().registerResponseFilter((type, resp) => { if (type !== shaka.net.NetworkingEngine.RequestType.SEGMENT) return; segStats.times.push(resp.timeMs || 0); segStats.bytes += resp.data?.byteLength || 0; if (!segStats.colo) { const ray = resp.headers?.['cf-ray'] || ''; if (ray) { segStats.colo = ray.split('-')[1] || '?'; log(`segments are served by Cloudflare site ${segStats.colo}`); } } });
   const v = $('v');
   if (nativeHls) v.addEventListener('resize', showActive);
+  // Quality per person (2026-10-19): auto, or a fixed rung. A fixed rung turns Shaka's automatic switching off; the viewer's stall
+  // guard below only acts on auto, so a rung someone picked is never capped behind their back.
+  const fillQuality = () => { const sel = $('q'), cur = sel.value; sel.innerHTML = '<option value="auto">auto</option>'; const seen = new Set(); player.getVariantTracks().sort((a, b) => b.height - a.height).forEach(t => { if (seen.has(t.height)) return; seen.add(t.height); const o = document.createElement('option'); o.value = t.height; o.textContent = `${t.height}p`; sel.appendChild(o); }); sel.value = [...sel.options].some(o => o.value === cur) ? cur : 'auto'; };
+  player.addEventListener('trackschanged', fillQuality);
+  $('q').onchange = () => { const h = $('q').value; if (h === 'auto') { player.configure({ abr: { enabled: true } }); log('quality: auto'); return; } const t = player.getVariantTracks().find(t => String(t.height) === h); if (t) { player.configure({ abr: { enabled: false } }); player.selectVariantTrack(t, true, 6); log(`quality: ${h}p (fixed)`); } };
   let stallTimer = null, capUntil = 0;
-  const capLow = (why) => { if (isHost || !player || nativeHls) return; const t = player.getVariantTracks().find(t => t.active); capUntil = Date.now() + 30000; player.configure({ abr: { restrictions: { maxHeight: 480 } } }); log(`stall guard: ${why} at ${t ? t.height + 'p' : '?'}; capped at 480p for 30 s so the next segment is small`); $('res').textContent += ' (capped)'; setTimeout(() => { if (Date.now() >= capUntil && player) { capUntil = 0; player.configure({ abr: { restrictions: { maxHeight: Infinity } } }); log('stall guard: cap lifted, automatic quality again'); } }, 30000); };
+  const capLow = (why) => { if (isHost || !player || nativeHls || $('q').value !== 'auto') return; const t = player.getVariantTracks().find(t => t.active); capUntil = Date.now() + 30000; player.configure({ abr: { restrictions: { maxHeight: 480 } } }); log(`stall guard: ${why} at ${t ? t.height + 'p' : '?'}; capped at 480p for 30 s so the next segment is small`); $('res').textContent += ' (capped)'; setTimeout(() => { if (Date.now() >= capUntil && player) { capUntil = 0; player.configure({ abr: { restrictions: { maxHeight: Infinity } } }); log('stall guard: cap lifted, automatic quality again'); } }, 30000); };
   v.addEventListener('waiting', () => { if (isHost || v.paused) return; recentStallAt = Date.now(); clearTimeout(stallTimer); stallTimer = setTimeout(() => { if (!v.paused && v.readyState < 3 && clock?.state === 'playing' && !capUntil) capLow('picture stopped for 1 s'); }, 1000); });
   v.addEventListener('playing', () => { clearTimeout(stallTimer); $('st').textContent = 'playing'; }); v.addEventListener('pause', () => { if (!v.ended) $('st').textContent = 'paused'; }); v.addEventListener('waiting', () => $('st').textContent = 'buffering');
-  try { $('st').textContent = 'loading'; await player.load(me_.hls); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, protected-URL over HLS, no license requests`); attachSubtitles(caps.live, me_.subtitles, $('subs'), log, isHost ? { remember: true, onChange: (l) => { hostSubtitle = l; wsSend({ t: 'subtitle', lang: l }); } } : { locked: true }).then(apply => { subsApply = apply; if (isHost) { hostSubtitle = apply(roomSubtitle !== 'off' ? roomSubtitle : rememberedSubtitle()); wsSend({ t: 'subtitle', lang: hostSubtitle }); } else apply(roomSubtitle); }); audApply = attachAudio(player, me_.audio, $('aud'), log, isHost ? { remember: true, onChange: (l) => { hostAudio = l; wsSend({ t: 'audio', lang: l }); } } : { locked: true }); if (isHost) { hostAudio = audApply(roomAudio || rememberedAudio()); if (hostAudio) wsSend({ t: 'audio', lang: hostAudio }); } else if (roomAudio) audApply(roomAudio); } catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
+  try { $('st').textContent = 'loading'; await player.load(me_.hls); showActive(); log(`film loaded: ${v.duration.toFixed(0)} s, protected-URL over HLS, no license requests`); attachSubtitles(caps.live, me_.subtitles, $('subs'), log, { remember: true }).then(apply => { subsApply = apply; apply(rememberedSubtitle()); }); audApply = attachAudio(player, me_.audio, $('aud'), log, { remember: true }); audApply(rememberedAudio()); fillQuality(); } catch (e) { log(`load failed: ${e.code} ${e.message || ''}`); $('st').textContent = 'error'; }
   if (!isHost) $('gate').style.display = 'flex';
   $('bGate').onclick = () => { userStarted = true; $('gate').style.display = 'none'; v.muted = false; if (clock?.state === 'playing' && !linkDown) v.play().catch(() => {}); else { v.pause(); $('st').textContent = clock ? 'waiting for host' : 'connecting to room'; } $('cam').play().catch(() => {}); $('hostAudio').play().catch(() => {}); };
   // A viewer's film plays only on the host's clock. Anything else that starts it (native controls in fullscreen, picture in
@@ -595,6 +676,7 @@ async function runParty(me_, isHost) {
   if (!isHost) v.addEventListener('seeked', () => { if (v.paused) log(`seeked: now at ${v.currentTime.toFixed(1)} s, paused, readyState ${v.readyState}`); });
   window.__closeWs = () => ws?.close();   // for scripts/tests
   window.__player = () => player;
+  const disposeMenu = settingsMenu($('v').parentElement, { subs: $('subs'), aud: $('aud'), q: $('q'), caps: $('caps') });
   window.__sync = () => ({ t: v.currentTime, paused: v.paused, rs: v.readyState, rate: v.playbackRate, clock, exp: expected(), offset, oneWay: oneWay(), voiceMs, queued: clockQ.length, hostReady, pingKnown });   // for scripts/tests
 
   // room
@@ -616,13 +698,12 @@ async function runParty(me_, isHost) {
   timers.push(setInterval(() => { if (ws?.readyState === 1 && (Date.now() - connectedAt < 60000 || (Date.now() - connectedAt) % 30000 < 5000)) pingTime(); }, 5000));
   const onRoom = (m) => {
     switch (m.t) {
-      case 'hello': roomSubtitle = m.subtitle || 'off'; if (subsApply && !isHost) subsApply(roomSubtitle); if (isHost && hostSubtitle !== null) wsSend({ t: 'subtitle', lang: hostSubtitle }); roomAudio = m.audio || ''; if (audApply && !isHost && roomAudio) audApply(roomAudio); if (isHost && hostAudio) wsSend({ t: 'audio', lang: hostAudio }); takeClock(m.clock, m.serverTime); if (isHost && liveList().length) api('PUT', P('/rtc/tracks'), { tracks: liveList() }, auth()).then(r => log(`re-announced ${liveList().length} live track(s) after reconnect -> ${r.status}`)); setPinned(m.pinned); $('viewers').textContent = m.viewers; if ($('slow')) $('slow').value = m.slowModeS; (m.recent || []).forEach(addMsg); setLive(m.hostTracks, m.hostOnline); if (m.hostTracks) pullTracks(m.hostTracks); if (m.muted) $('chatHint').textContent = 'You are muted by the host.'; break;
+      case 'hello': takeClock(m.clock, m.serverTime); if (isHost && liveList().length) api('PUT', P('/rtc/tracks'), { tracks: liveList() }, auth()).then(r => log(`re-announced ${liveList().length} live track(s) after reconnect -> ${r.status}`)); setPinned(m.pinned); $('viewers').textContent = m.viewers; if ($('slow')) $('slow').value = m.slowModeS; (m.recent || []).forEach(addMsg); setLive(m.hostTracks, m.hostOnline); if (m.hostTracks) pullTracks(m.hostTracks); if (m.muted) $('chatHint').textContent = 'You are muted by the host.'; break;
       case 'time': { const now = Date.now(); const rtt = now - m.c; if (!bestPing || rtt <= bestPing.rtt || now - bestPing.at > 60000) { bestPing = { rtt, at: now }; offset = m.s - (m.c + rtt / 2); } if (!pingKnown) { pingKnown = true; if (isHost && clock) takeClock(clock, clock.at + (Date.now() - clock.local)); } break; }
       case 'chat': addMsg(m.msg); break;
       case 'system': addSys(m.text); break;
       case 'pin': setPinned(m.pinned); break;
-      case 'subtitle': roomSubtitle = m.lang || 'off'; if (subsApply) subsApply(roomSubtitle); break;
-      case 'audio': roomAudio = m.lang || ''; if (audApply && roomAudio) audApply(roomAudio); break;
+      case 'subtitle': case 'audio': break;   // room-wide language from an older page: ignored, each person keeps their own
       case 'clock': takeClock(m.clock, m.s); break;
       case 'roster': $('viewers').textContent = m.viewers; setLive(hostTracks, m.hostOnline); break;
       case 'tracks': setLive(m.hostTracks, true); if (m.hostTracks) pullTracks(m.hostTracks); else if (!isHost) clearRemote(); break;
@@ -823,7 +904,7 @@ async function runParty(me_, isHost) {
 
   connectWs();
   window.__party = { hostGroups, viewerConns, layerState, allPcs, me: me_ };   // test hook
-  return async () => { closed = true; timers.forEach(clearInterval); try { ws?.close(1000, 'left'); } catch {} for (const g of [...hostGroups.keys()]) { try { await unpublishGroup(g); } catch {} } camStream?.getTracks().forEach(t => t.stop()); micStream?.getTracks().forEach(t => t.stop()); clearRemote(); if (player) await player.destroy(); delete window.__party; };
+  return async () => { closed = true; disposeMenu(); timers.forEach(clearInterval); try { ws?.close(1000, 'left'); } catch {} for (const g of [...hostGroups.keys()]) { try { await unpublishGroup(g); } catch {} } camStream?.getTracks().forEach(t => t.stop()); micStream?.getTracks().forEach(t => t.stop()); clearRemote(); if (player) await player.destroy(); delete window.__party; };
 }
 
 // ---- boot -------------------------------------------------------------------------------------------------------
