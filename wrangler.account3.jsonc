@@ -1,0 +1,56 @@
+{
+  // Option 5B, Phase A. Free plan only. See ../BUILD_PLAN.md
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ztor-video",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // The THIRD account (It@ztor.com's Account, owns ztor.stream), 2026-10-20. Deploy with:
+  //   XDG_CONFIG_HOME=~/.wrangler-account3 npx wrangler deploy -c wrangler.account3.jsonc
+  // The Worker answers at video.ztor.stream (custom domain, record and certificate made by Cloudflare).
+  "account_id": "42902e727f06b3155b8e9edb95110e93",
+  "routes": [{ "pattern": "video.ztor.stream", "custom_domain": true }],
+  "observability": { "enabled": true },
+
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
+
+  "r2_buckets": [
+    { "binding": "MASTERS", "bucket_name": "ztor-masters" },
+    { "binding": "STREAMS", "bucket_name": "ztor-streams" }
+  ],
+  "d1_databases": [
+    { "binding": "DB", "database_name": "ztor-video", "database_id": "af9e1b67-c43c-49f1-a748-48786e23370e", "migrations_dir": "migrations" }
+  ],
+  "kv_namespaces": [
+    { "binding": "KEYS", "id": "59af6851893644c2947fc31695e2dbd6" }
+  ],
+  "workflows": [
+    { "name": "encode-film", "binding": "ENCODE_FILM", "class_name": "EncodeFilmWorkflow" }
+  ],
+  // Watch party (2026-09-24): one Durable Object per party. SQLite-backed classes are the ones the Free plan allows.
+  "durable_objects": { "bindings": [{ "name": "PARTY", "class_name": "PartyRoom" }] },
+  "migrations": [{ "tag": "party-v1", "new_sqlite_classes": ["PartyRoom"] }],
+  // Step 8: 10 license requests per minute per user.
+  "unsafe": {
+    "bindings": [
+      { "name": "LICENSE_RL", "type": "ratelimit", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }
+    ]
+  },
+  "vars": {
+    "R2_ACCOUNT_ID": "42902e727f06b3155b8e9edb95110e93",
+    "MASTERS_BUCKET": "ztor-masters",
+    "STREAMS_BUCKET": "ztor-streams",
+    "PART_SIZE_MB": "100",
+    "JWT_TTL_S": "14400",
+    "KEY_SCHEME": "cbcs",
+    "LICENSE_RATE_LIMIT": "0",   // step 8 says 10 per minute per viewer; 0 = disabled for testing (2026-09-24). Re-enable before launch.,
+    "TEST_MODE": "true",
+    "DRM_VENDOR": "axinom",
+    "DRM_LICENSE_URL_WIDEVINE": "https://af7427b7.drm-widevine-licensing.axprod.net/AcquireLicense",
+    "DRM_LICENSE_URL_PLAYREADY": "https://af7427b7.drm-playready-licensing.axprod.net/AcquireLicense",
+    "DRM_LICENSE_URL_FAIRPLAY": "https://af7427b7.drm-fairplay-licensing.axprod.net/AcquireLicense",
+    "DRM_FAIRPLAY_CERT_URL": "https://tools.axinom.com/FPScert/fairplay.cer",
+    "REALTIME_APP_ID": ""     // watch party: Realtime SFU app id (dashboard > Realtime > Serverless SFU). Empty = rtc routes answer 503; chat and sync still work.
+  }
+  // Secrets (wrangler secret put): JWT_SECRET, RUNNER_TOKEN, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, REALTIME_APP_SECRET (watch party), TURN_KEY_API_TOKEN (optional, with TURN_KEY_ID var)
+}
