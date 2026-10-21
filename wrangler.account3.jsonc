@@ -50,7 +50,8 @@
     "DRM_LICENSE_URL_PLAYREADY": "https://af7427b7.drm-playready-licensing.axprod.net/AcquireLicense",
     "DRM_LICENSE_URL_FAIRPLAY": "https://af7427b7.drm-fairplay-licensing.axprod.net/AcquireLicense",
     "DRM_FAIRPLAY_CERT_URL": "https://tools.axinom.com/FPScert/fairplay.cer",
-    "REALTIME_APP_ID": ""     // watch party: Realtime SFU app id (dashboard > Realtime > Serverless SFU). Empty = rtc routes answer 503; chat and sync still work.
+    "REALTIME_APP_ID": "944f5ab7f50dc3ae22d69be6c98efc78",
+    "TURN_KEY_ID": "4f3672866d4dccafb7ac2dfaf7856ddf"     // watch party: Realtime SFU app id (dashboard > Realtime > Serverless SFU). Empty = rtc routes answer 503; chat and sync still work.
   }
   // Secrets (wrangler secret put): JWT_SECRET, RUNNER_TOKEN, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, REALTIME_APP_SECRET (watch party), TURN_KEY_API_TOKEN (optional, with TURN_KEY_ID var)
 }
